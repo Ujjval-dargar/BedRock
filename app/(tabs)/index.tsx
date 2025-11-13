@@ -1,0 +1,95 @@
+import { CategoryCards } from '@/components/category-cards';
+import { HomeHeader } from '@/components/home-header';
+import { ProfileModal } from '@/components/profile-modal';
+import { RecentlyAdded } from '@/components/recently-added';
+import { SearchBar } from '@/components/search-bar';
+import { TutorialOverlay } from '@/components/tutorial-overlay';
+import { useTutorial } from '@/hooks/use-tutorial';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const NAV_BAR_TOTAL_HEIGHT = 90; // Navigation bar height + FAB overlap + margin
+
+export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const bottomPadding = NAV_BAR_TOTAL_HEIGHT + insets.bottom + 20;
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const {
+    showTutorial,
+    isLoading: tutorialLoading,
+    currentStep,
+    nextStep,
+    previousStep,
+    completeTutorial,
+    skipTutorial,
+  } = useTutorial();
+
+  const handleLogout = () => {
+    // Handle logout logic here
+    console.log('Logout pressed');
+  };
+
+  return (
+    <View style={styles.container}>
+      <HomeHeader onProfilePress={() => setProfileModalVisible(true)} />
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.titleSection}>
+          <Text style={styles.subtitle}>Manage your</Text>
+          <Text style={styles.title}>Password Easily</Text>
+        </View>
+        
+        <SearchBar />
+        <CategoryCards />
+        <RecentlyAdded />
+      </ScrollView>
+
+      <ProfileModal
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        onLogout={handleLogout}
+      />
+
+      {!tutorialLoading && (
+        <TutorialOverlay
+          visible={showTutorial}
+          onComplete={completeTutorial}
+          onSkip={skipTutorial}
+          currentStep={currentStep}
+          onNext={nextStep}
+          onPrevious={previousStep}
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {},
+  titleSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6F6BF5',
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#6F6BF5',
+  },
+});
