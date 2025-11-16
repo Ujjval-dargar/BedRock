@@ -18,7 +18,6 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
   const [item, setItem] = useState<any>(null);
 
   useEffect(() => {
-    // fake fetch
     const sample = {
       id: idFromRoute || "1",
       title: "Google",
@@ -35,11 +34,10 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
   };
 
   const handleEdit = (): void => {
-    const path = `/edit-password?id=${encodeURIComponent(String(item?.id || ""))}`;
+    const path = `/edit-password-details?id=${encodeURIComponent(String(item?.id || ""))}`;
     if (navigation && typeof navigation.navigate === "function") {
-      // navigation.navigate accepts route names depending on stack; fallback to router.push
       try {
-        navigation.navigate('/edit-password' as any, { id: item?.id } as any);
+        navigation.navigate('/edit-password-details' as any, { id: item?.id } as any);
       } catch (e) {
         router.push(path as any);
       }

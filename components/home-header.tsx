@@ -1,6 +1,7 @@
 import { StyleSheet, View, Pressable, Text } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 interface HomeHeaderProps {
   onProfilePress: () => void;
@@ -8,6 +9,7 @@ interface HomeHeaderProps {
 
 export function HomeHeader({ onProfilePress }: HomeHeaderProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
@@ -17,7 +19,7 @@ export function HomeHeader({ onProfilePress }: HomeHeaderProps) {
         </View>
         <Text style={styles.userName}>Stephen</Text>
       </Pressable>
-      <Pressable style={styles.settingsButton}>
+      <Pressable style={styles.settingsButton} onPress={() => router.push('/settings')}>
         <MaterialIcons name="settings" size={24} color="#333" />
       </Pressable>
     </View>

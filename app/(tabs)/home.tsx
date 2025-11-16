@@ -5,6 +5,7 @@ import { RecentlyAdded } from '@/components/recently-added';
 import { SearchBar } from '@/components/search-bar';
 import { TutorialOverlay } from '@/components/tutorial-overlay';
 import { useTutorial } from '@/hooks/use-tutorial';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,8 +27,9 @@ export default function HomeScreen() {
   } = useTutorial();
 
   const handleLogout = () => {
-    // Handle logout logic here
-    console.log('Logout pressed');
+    // Clear any stored auth data here (AsyncStorage, SecureStore, etc.)
+    // For now, navigate back to welcome screen
+    router.replace('/welcome' as any);
   };
 
   return (

@@ -62,7 +62,6 @@ export default function EditPasswordScreen(props: any): React.ReactElement {
   };
 
   const handleBack = (): void => {
-    // Use goBack/router.back instead of pushing to view-password.
     if (navigation && typeof navigation.goBack === "function") {
       navigation.goBack();
     } else {
@@ -87,7 +86,6 @@ export default function EditPasswordScreen(props: any): React.ReactElement {
           text: "Delete",
           style: "destructive",
           onPress: () => {
-            // TODO: replace with real delete logic
             Alert.alert("Deleted");
             if (navigation && navigation.navigate) {
               navigation.navigate("/");

@@ -171,7 +171,7 @@ export default function AnalyticsScreen() {
           backgroundColor={PASSWORD_COLORS.safe.light}
           iconColor={PASSWORD_COLORS.safe.primary}
           iconBg={PASSWORD_COLORS.safe.iconBg}
-          onPress={() => router.push('/safe-passwords')}
+          onPress={() => router.push('/safe-passwords-list')}
         />
         <CategoryCard
           icon="refresh"
@@ -180,7 +180,7 @@ export default function AnalyticsScreen() {
           backgroundColor={PASSWORD_COLORS.weak.light}
           iconColor={PASSWORD_COLORS.weak.primary}
           iconBg={PASSWORD_COLORS.weak.iconBg}
-          onPress={() => router.push('/weak-passwords')}
+          onPress={() => router.push('/weak-passwords-list')}
         />
         <CategoryCard
           icon="content-copy"
@@ -189,7 +189,7 @@ export default function AnalyticsScreen() {
           backgroundColor={PASSWORD_COLORS.duplicate.light}
           iconColor={PASSWORD_COLORS.duplicate.primary}
           iconBg={PASSWORD_COLORS.duplicate.iconBg}
-          onPress={() => router.push('/duplicate-passwords')}
+          onPress={() => router.push('/duplicate-passwords-list')}
         />
         <CategoryCard
           icon="warning"
@@ -198,7 +198,7 @@ export default function AnalyticsScreen() {
           backgroundColor={PASSWORD_COLORS.leaked.light}
           iconColor={PASSWORD_COLORS.leaked.primary}
           iconBg={PASSWORD_COLORS.leaked.iconBg}
-          onPress={() => router.push('/leaked-passwords')}
+          onPress={() => router.push('/leaked-passwords-list')}
         />
       </ScrollView>
     </ThemedView>

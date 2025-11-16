@@ -80,7 +80,7 @@ export function RecentlyAdded() {
     if (selectedItemIndex !== null) {
       const id = String(selectedItemIndex + 1);
       // navigate to edit-password route with id
-      router.push(`/edit-password?id=${encodeURIComponent(id)}` as any);
+      router.push(`/edit-password-details?id=${encodeURIComponent(id)}` as any);
     }
   };
 
@@ -106,7 +106,7 @@ export function RecentlyAdded() {
             <Pressable
               key={index}
               style={[styles.item, { backgroundColor: item.backgroundColor }]}
-              onPress={() => router.push(`/view-password?id=${encodeURIComponent(id)}`)}
+              onPress={() => router.push(`/view-password-details?id=${encodeURIComponent(id)}`)}
             >
               <View style={styles.iconWrapper}>
                 <View style={[styles.iconContainer, { backgroundColor: item.iconColor }]}>

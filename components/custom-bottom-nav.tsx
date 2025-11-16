@@ -12,7 +12,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: 'home', label: 'Home', icon: 'home', route: '/(tabs)/index' },
+  { name: 'home', label: 'Home', icon: 'home', route: '/(tabs)/home' },
   { name: 'vault', label: 'Vault', icon: 'lock-outline', route: '/(tabs)/vault' },
   { name: 'generator', label: 'Generator', icon: 'vpn-key', route: '/(tabs)/generator' },
   // Open the original analytics screen when tapping Risks
@@ -35,19 +35,19 @@ export default function CustomBottomNav({ onFABPress }: CustomBottomNavProps) {
   const insets = useSafeAreaInsets();
 
   const isActive = (route: string) => {
-    const currentTab = (segments[segments.length - 1] as string) || 'index';
+    const currentTab = (segments[segments.length - 1] as string) || 'home';
     const routeTab = route.replace('/(tabs)/', '').replace('/', '');
     const normalizedPath = pathname?.replace(/\/$/, '') || '';
     const pathMatches = normalizedPath === route || normalizedPath.endsWith('/' + routeTab);
 
-    if (routeTab === 'index') {
+    if (routeTab === 'home') {
       return (
-        currentTab === 'index' ||
+        currentTab === 'home' ||
         !currentTab ||
         currentTab.length === 0 ||
         normalizedPath === '/(tabs)' ||
         normalizedPath === '/(tabs)/' ||
-        normalizedPath === '/(tabs)/index' ||
+        normalizedPath === '/(tabs)/home' ||
         normalizedPath === '' ||
         normalizedPath === '/'
       );
@@ -65,11 +65,7 @@ export default function CustomBottomNav({ onFABPress }: CustomBottomNavProps) {
       return;
     }
 
-    if (route === '/(tabs)/index') {
-      router.replace('/(tabs)/' as any);
-    } else {
-      router.push(route as any);
-    }
+    router.push(route as any);
   };
 
   const handleFABPress = () => {
