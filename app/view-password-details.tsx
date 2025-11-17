@@ -46,6 +46,11 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
     }
   };
 
+  const handleShare = (): void => {
+    const path = `/share-password?id=${encodeURIComponent(String(item?.id || ""))}`;
+    router.push(path as any);
+  };
+
   const SAView: any = SafeAreaView;
 
   return (
@@ -70,9 +75,15 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
           <Text style={styles.label}>URL</Text>
           <Text style={styles.value}>{item.url}</Text>
 
-          <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
-            <Text style={styles.editText}>Edit</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+              <Ionicons name="share-social-outline" size={18} color="#6B5BFF" />
+              <Text style={styles.shareBtnText}>Share</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
+              <Text style={styles.editText}>Edit</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
         <Text style={{ padding: 16 }}>Loading...</Text>
@@ -90,6 +101,9 @@ const styles = StyleSheet.create({
   itemTitle: { fontSize: 20, fontWeight: "800", marginBottom: 8 },
   label: { marginTop: 10, color: "#666", fontWeight: "600" },
   value: { marginTop: 6, color: "#222", fontSize: 16 },
-  editBtn: { marginTop: 18, backgroundColor: "#6B5BFF", padding: 12, borderRadius: 10, alignItems: "center" },
+  buttonRow: { flexDirection: "row", gap: 10, marginTop: 18 },
+  shareBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#F0EDFF", padding: 12, borderRadius: 10, borderWidth: 2, borderColor: "#6B5BFF" },
+  shareBtnText: { color: "#6B5BFF", fontWeight: "700", fontSize: 14 },
+  editBtn: { flex: 1, backgroundColor: "#6B5BFF", padding: 12, borderRadius: 10, alignItems: "center" },
   editText: { color: "#fff", fontWeight: "700" },
 });

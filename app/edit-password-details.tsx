@@ -54,10 +54,11 @@ export default function EditPasswordScreen(props: any): React.ReactElement {
       Alert.alert("Title required");
       return;
     }
-    if (navigation && typeof navigation.navigate === "function") {
-      navigation.navigate("/");
+    // Navigate back to view-password-details screen
+    if (navigation && typeof navigation.goBack === "function") {
+      navigation.goBack();
     } else {
-      router.push("/");
+      router.back();
     }
   };
 
@@ -87,10 +88,11 @@ export default function EditPasswordScreen(props: any): React.ReactElement {
           style: "destructive",
           onPress: () => {
             Alert.alert("Deleted");
+            // Navigate to vault after deletion
             if (navigation && navigation.navigate) {
-              navigation.navigate("/");
+              navigation.navigate("/(tabs)/vault");
             } else {
-              router.push("/");
+              router.push("/(tabs)/vault" as any);
             }
           },
         },

@@ -126,15 +126,19 @@ const LEAKED_PASSWORDS = [
 ];
 
 const LeakedPasswordItem = ({
+  id,
   website,
   email,
   leakedDate,
   severity,
+  onChangePassword,
 }: {
+  id: number;
   website: string;
   email: string;
   leakedDate: string;
   severity: string;
+  onChangePassword: (id: number) => void;
 }) => {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -204,7 +208,7 @@ const LeakedPasswordItem = ({
           <ThemedText style={styles.dateText}>Leaked: {formatDate(leakedDate)}</ThemedText>
         </View>
       </View>
-      <TouchableOpacity style={styles.changePasswordButton}>
+      <TouchableOpacity style={styles.changePasswordButton} onPress={() => onChangePassword(id)}>
         <MaterialIcons name="lock-reset" size={18} color="#EF4444" />
         <Text style={styles.changePasswordText}>Change Password</Text>
       </TouchableOpacity>
@@ -221,6 +225,11 @@ export default function LeakedPasswordsScreen() {
     // some router/navigation setups may still show a header; force hide it
     (navigation as any)?.setOptions?.({ headerShown: false });
   }, [navigation]);
+
+  const handleChangePassword = (id: number) => {
+    router.push(`/edit-password-details?id=${id}` as any);
+  };
+
   return (
     <ThemedView style={styles.container}>
       {/* Header */}
@@ -261,10 +270,12 @@ export default function LeakedPasswordsScreen() {
         {LEAKED_PASSWORDS.map((password) => (
           <LeakedPasswordItem
             key={password.id}
+            id={password.id}
             website={password.website}
             email={password.email}
             leakedDate={password.leakedDate}
             severity={password.severity}
+            onChangePassword={handleChangePassword}
           />
         ))}
       </ScrollView>

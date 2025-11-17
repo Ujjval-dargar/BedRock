@@ -28,6 +28,16 @@ type SettingsItem = {
 
 const settingsItems: SettingsItem[] = [
   {
+    id: 'shared-passwords',
+    icon: 'share-social',
+    iconFamily: 'Ionicons',
+    title: 'Shared Passwords',
+    subtitle: 'Manage shared credentials',
+    type: 'arrow',
+    accentColor: '#8B5CF6',
+    accentBackground: '#F3E8FF',
+  },
+  {
     id: 'account-security',
     icon: 'shield-checkmark',
     iconFamily: 'Ionicons',
@@ -156,6 +166,9 @@ export default function SettingsScreen() {
   const handleItemPress = (itemId: string) => {
     console.log('Pressed:', itemId);
     // Handle navigation based on itemId
+    if (itemId === 'shared-passwords') {
+      router.push('/shared-passwords-list' as any);
+    }
   };
 
   return (

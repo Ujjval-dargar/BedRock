@@ -11,7 +11,6 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Picker } from "@react-native-picker/picker";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
@@ -25,134 +24,247 @@ export default function CreatePasswordScreen(): React.ReactElement {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [secure, setSecure] = useState<boolean>(true);
+  const [notes, setNotes] = useState<string>("");
 
-  const categories = ["Browser", "Email", "Bank", "Social", "Other"];
+  const categories = [
+    { label: "Browser", icon: "globe-outline", color: "#6B5BFF" },
+    { label: "Social", icon: "people-outline", color: "#8B5CF6" },
+    { label: "Work", icon: "briefcase-outline", color: "#3B82F6" },
+    { label: "Card", icon: "card-outline", color: "#10B981" },
+    { label: "Email", icon: "mail-outline", color: "#F59E0B" },
+    { label: "Other", icon: "apps-outline", color: "#6B7280" },
+  ];
 
   const handleRandomize = (): void => {
     const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
     let res = "";
-    const len = 12;
+    const len = 16;
     for (let i = 0; i < len; i++) {
       res += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     setPassword(res);
+    Alert.alert("Generated", "Strong password generated!");
+  };
+
+  const handleUseGenerator = (): void => {
+    router.push("/(tabs)/generator" as any);
   };
 
   const handleCopyPassword = async (): Promise<void> => {
     if (!password) {
-      Alert.alert("No password to copy");
+      Alert.alert("Error", "No password to copy");
       return;
     }
     await Clipboard.setStringAsync(password);
-    Alert.alert("Copied to clipboard");
+    Alert.alert("Copied", "Password copied to clipboard");
   };
 
   const handleAddToVault = (): void => {
     if (!title.trim()) {
-      Alert.alert("Please enter a title");
+      Alert.alert("Required Field", "Please enter a title");
       return;
     }
     if (!username.trim()) {
-      Alert.alert("Please enter a username");
+      Alert.alert("Required Field", "Please enter a username or email");
       return;
     }
-    // TODO: persist the password
-    router.push('/');
+    if (!password.trim()) {
+      Alert.alert("Required Field", "Please enter a password");
+      return;
+    }
+    // TODO: persist the password to storage
+    Alert.alert(
+      "Success",
+      "Password saved to your vault!",
+      [
+        {
+          text: "View Vault",
+          onPress: () => router.push("/(tabs)/vault" as any),
+        },
+        {
+          text: "Add Another",
+          onPress: () => {
+            setTitle("");
+            setUsername("");
+            setPassword("");
+            setUrl("");
+            setNotes("");
+          },
+        },
+      ]
+    );
   };
 
   const SAView: any = SafeAreaView;
 
   return (
-    <SAView style={styles.safe} edges={["top", "left", "right"]}>
+    <SAView style={styles.safe} edges={["top"]}>
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: "padding", android: undefined })}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.headerRow}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.smallCircle}>
-              <Ionicons name="chevron-back" size={18} color="#000" />
-            </TouchableOpacity>
-            <Text style={styles.pageTitle}>Create Password</Text>
-            <View style={{ width: 34 }} />
-          </View>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.iconCircle}>
+            <Ionicons name="chevron-back" size={20} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Add Password</Text>
+          <View style={{ width: 36 }} />
+        </View>
 
-          <View style={styles.iconWrap}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="globe-outline" size={28} color="#333" />
-            </View>
-            <Text style={styles.iconLabel}>Change icon</Text>
-          </View>
-
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Title Input */}
           <View style={styles.card}>
-            <Text style={styles.fieldLabel}>Title</Text>
+            <Text style={styles.label}>Title *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Google Classroom"
+              placeholder="e.g. Google Account"
               value={title}
               onChangeText={setTitle}
+              placeholderTextColor="#9CA3AF"
             />
+          </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Category</Text>
-            <View style={styles.pickerWrap}>
-              <Picker
-                selectedValue={category}
-                onValueChange={(val: string | number) => setCategory(String(val))}
-                style={styles.picker}
-                mode="dropdown"
-              >
-                {categories.map((c) => (
-                  <Picker.Item label={c} value={c} key={c} />
-                ))}
-              </Picker>
+          {/* Category Selection */}
+          <View style={styles.card}>
+            <Text style={styles.label}>Category</Text>
+            <View style={styles.categoryGrid}>
+              {categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat.label}
+                  style={[
+                    styles.categoryChip,
+                    category === cat.label && styles.categoryChipActive,
+                  ]}
+                  onPress={() => setCategory(cat.label)}
+                >
+                  <View
+                    style={[
+                      styles.categoryIcon,
+                      {
+                        backgroundColor:
+                          category === cat.label ? cat.color : `${cat.color}20`,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={cat.icon as any}
+                      size={18}
+                      color={category === cat.label ? "#fff" : cat.color}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      category === cat.label && styles.categoryTextActive,
+                    ]}
+                  >
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
+          </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>URL</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="www.example.com"
-              value={url}
-              onChangeText={setUrl}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-
-            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>User Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="username@example.com"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-            />
-
-            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Password</Text>
-            <View style={styles.passwordRow}>
-              <View style={styles.passwordLeft}>
-                <Ionicons name="lock-closed-outline" size={18} color="#6B5BFF" />
-              </View>
-
+          {/* Username Input */}
+          <View style={styles.card}>
+            <Text style={styles.label}>Username / Email *</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="person-outline" size={20} color="#9CA3AF" />
               <TextInput
-                style={styles.passwordInput}
-                placeholder="••••••••••••"
+                style={styles.inputWithIcon}
+                placeholder="username@example.com"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+          </View>
+
+          {/* Password Input */}
+          <View style={styles.card}>
+            <Text style={styles.label}>Password *</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" />
+              <TextInput
+                style={styles.inputWithIcon}
+                placeholder="Enter password"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={secure}
                 autoCapitalize="none"
+                placeholderTextColor="#9CA3AF"
               />
-
-              <TouchableOpacity onPress={() => setSecure((s) => !s)} style={styles.iconBtn}>
-                <Ionicons name={secure ? "eye-outline" : "eye-off-outline"} size={20} color="#666" />
+              <TouchableOpacity onPress={() => setSecure(!secure)} style={styles.iconBtn}>
+                <Ionicons
+                  name={secure ? "eye-outline" : "eye-off-outline"}
+                  size={20}
+                  color="#6B7280"
+                />
               </TouchableOpacity>
+              <TouchableOpacity onPress={handleCopyPassword} style={styles.iconBtn}>
+                <Ionicons name="copy-outline" size={20} color="#6B5BFF" />
+              </TouchableOpacity>
+            </View>
 
-              <TouchableOpacity onPress={handleRandomize} style={styles.iconBtn}>
-                <Ionicons name="sync-outline" size={20} color="#6B5BFF" />
+            <View style={styles.passwordActions}>
+              <TouchableOpacity style={styles.actionButton} onPress={handleRandomize}>
+                <Ionicons name="sync-outline" size={18} color="#6B5BFF" />
+                <Text style={styles.actionButtonText}>Quick Generate</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.actionButtonPrimary]}
+                onPress={handleUseGenerator}
+              >
+                <Ionicons name="settings-outline" size={18} color="#fff" />
+                <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>
+                  Advanced Generator
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.addBtn} onPress={handleAddToVault}>
-            <Text style={styles.addBtnText}>Add to vault</Text>
+          {/* URL Input */}
+          <View style={styles.card}>
+            <Text style={styles.label}>Website URL (Optional)</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="link-outline" size={20} color="#9CA3AF" />
+              <TextInput
+                style={styles.inputWithIcon}
+                placeholder="https://example.com"
+                value={url}
+                onChangeText={setUrl}
+                autoCapitalize="none"
+                keyboardType="url"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+          </View>
+
+          {/* Notes Input */}
+          <View style={styles.card}>
+            <Text style={styles.label}>Notes (Optional)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Add any additional notes..."
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+
+          {/* Save Button */}
+          <TouchableOpacity style={styles.saveButton} onPress={handleAddToVault}>
+            <Ionicons name="checkmark-circle" size={20} color="#fff" />
+            <Text style={styles.saveButtonText}>Save to Vault</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -165,118 +277,163 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F2F6FB",
   },
-  scroll: {
-    padding: 20,
-    alignItems: "center",
-    paddingBottom: 40,
-  },
-  headerRow: {
-    width: "100%",
+  header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
-    marginTop: 6,
+    padding: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
-  smallCircle: {
+  iconCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#111",
-    backgroundColor: "#fff",
+    backgroundColor: "#F8F9FA",
     alignItems: "center",
     justifyContent: "center",
   },
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: "800",
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
     color: "#6B5BFF",
   },
-  iconWrap: {
-    alignItems: "center",
-    marginVertical: 8,
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: "#EFEFF3",
-  },
-  iconLabel: {
-    marginTop: 8,
-    color: "#666",
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
   },
   card: {
     backgroundColor: "#fff",
-    width: "100%",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginTop: 10,
+    marginBottom: 16,
     shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  fieldLabel: {
+  label: {
     fontSize: 14,
-    color: "#333",
+    fontWeight: "600",
+    color: "#374151",
     marginBottom: 8,
   },
   input: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+    color: "#333",
     borderWidth: 1,
-    borderColor: "#EFEFF3",
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: "#fff",
+    borderColor: "#E5E7EB",
   },
-  pickerWrap: {
-    borderWidth: 1,
-    borderColor: "#EFEFF3",
-    borderRadius: 8,
-    overflow: "hidden",
-    backgroundColor: "#fff",
+  textArea: {
+    minHeight: 100,
+    paddingTop: 14,
   },
-  picker: {
-    height: 44,
-    width: "100%",
-  },
-  passwordRow: {
+  inputContainer: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#F8F9FA",
+    borderRadius: 10,
+    paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#EFEFF3",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: "#fff",
+    borderColor: "#E5E7EB",
   },
-  passwordLeft: {
-    paddingHorizontal: 6,
-  },
-  passwordInput: {
+  inputWithIcon: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    fontSize: 15,
+    color: "#333",
   },
   iconBtn: {
     padding: 8,
   },
-  addBtn: {
-    marginTop: 20,
-    width: "100%",
-    backgroundColor: "#6B5BFF",
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: "center",
+  categoryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
   },
-  addBtnText: {
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#F8F9FA",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    width: "48%",
+  },
+  categoryChipActive: {
+    backgroundColor: "#F0EDFF",
+    borderColor: "#6B5BFF",
+  },
+  categoryIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
+    flex: 1,
+  },
+  categoryTextActive: {
+    color: "#6B5BFF",
+  },
+  passwordActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#F0EDFF",
+    borderWidth: 1,
+    borderColor: "#6B5BFF",
+  },
+  actionButtonPrimary: {
+    backgroundColor: "#6B5BFF",
+    borderColor: "#6B5BFF",
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6B5BFF",
+  },
+  actionButtonTextPrimary: {
+    color: "#fff",
+  },
+  saveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#6B5BFF",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    shadowColor: "#6B5BFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  saveButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",

@@ -353,15 +353,19 @@ const WEAK_PASSWORDS = [
 ];
 
 const WeakPasswordItem = ({
+  id,
   website,
   email,
   foundDate,
   daysAgo,
+  onChangePassword,
 }: {
+  id: number;
   website: string;
   email: string;
   foundDate: string;
   daysAgo: number;
+  onChangePassword: (id: number) => void;
 }) => {
   const websiteIcon = getWebsiteIcon(website);
 
@@ -401,7 +405,7 @@ const WeakPasswordItem = ({
           <ThemedText style={styles.dateText}>Found: {formatDate(foundDate)} ({daysAgo} days ago)</ThemedText>
         </View>
       </View>
-      <TouchableOpacity style={styles.changePasswordButton}>
+      <TouchableOpacity style={styles.changePasswordButton} onPress={() => onChangePassword(id)}>
         <MaterialIcons name="lock-reset" size={18} color={WEAK_COLORS.primary} />
         <Text style={styles.changePasswordText}>Change Password</Text>
       </TouchableOpacity>
@@ -416,6 +420,10 @@ export default function WeakPasswordsScreen() {
   useEffect(() => {
     (navigation as any)?.setOptions?.({ headerShown: false });
   }, [navigation]);
+
+  const handleChangePassword = (id: number) => {
+    router.push(`/edit-password-details?id=${id}` as any);
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -456,10 +464,12 @@ export default function WeakPasswordsScreen() {
         {WEAK_PASSWORDS.map((password) => (
           <WeakPasswordItem
             key={password.id}
+            id={password.id}
             website={password.website}
             email={password.email}
             foundDate={password.foundDate}
             daysAgo={password.daysAgo}
+            onChangePassword={handleChangePassword}
           />
         ))}
       </ScrollView>
