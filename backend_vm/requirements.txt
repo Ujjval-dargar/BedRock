@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+SQLAlchemy
+aiomysql
+mysql-connector-python
+python-dotenv
+passlib[argon2]
+pyjwt
+cryptography
+pydantic
+alembic

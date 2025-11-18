@@ -1,6 +1,7 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ScrollView,
   StyleSheet,
@@ -8,77 +9,57 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { passwordAPI, PasswordEntry, storageAPI } from '../../utils/api';
+import { aesDecrypt, validatePasswordStrength } from '../../utils/crypto';
 
 type PasswordItem = {
-  id: string;
+  id: number;
   name: string;
   email: string;
   category: string;
   icon: string;
   iconColor: string;
   status?: 'warning' | 'safe';
+  encryptedPassword: string;
+  notes?: string;
 };
 
-const passwordItems: PasswordItem[] = [
-  {
-    id: 'google',
-    name: 'Google',
-    email: 'TheFather32@gmail.com',
-    category: 'Browser',
-    icon: 'google',
-    iconColor: '#EA4335',
-    status: 'warning',
-  },
-  {
-    id: 'snapchat',
-    name: 'SnapChat',
-    email: 'TheFather32@gmail.com',
-    category: 'Social',
-    icon: 'snapchat-ghost',
-    iconColor: '#FFFC00',
-    status: 'safe',
-  },
-  {
-    id: 'twitter',
-    name: 'Twitter',
-    email: 'TheFather32@gmail.com',
-    category: 'Social',
-    icon: 'twitter',
-    iconColor: '#1DA1F2',
-    status: 'safe',
-  },
-  {
-    id: 'linkedin',
-    name: 'LinkedIn',
-    email: 'TheFather32@gmail.com',
-    category: 'Work',
-    icon: 'linkedin',
-    iconColor: '#0A66C2',
-    status: 'safe',
-  },
-  {
-    id: 'github',
-    name: 'GitHub',
-    email: 'developer@email.com',
-    category: 'Work',
-    icon: 'github',
-    iconColor: '#333333',
-    status: 'safe',
-  },
-  {
-    id: 'visa',
-    name: 'Visa Card',
-    email: '•••• 3271',
-    category: 'Card',
-    icon: 'credit-card',
-    iconColor: '#1A1F71',
-    status: 'safe',
-  },
-];
+const categories = ['All', 'Browser', 'Social', 'Work', 'Card', 'Email', 'Other'];
 
-const categories = ['All', 'Browser', 'Social', 'Work', 'Card'];
+// Helper to map category and get icon/color
+function getCategoryDisplay(category?: string) {
+  const cat = category || 'Other';
+  const displays: Record<string, { icon: string; color: string }> = {
+    Browser: { icon: 'globe', color: '#3B82F6' },
+    Social: { icon: 'people', color: '#EC4899' },
+    Work: { icon: 'briefcase', color: '#8B5CF6' },
+    Card: { icon: 'card', color: '#10B981' },
+    Email: { icon: 'mail', color: '#F59E0B' },
+    Other: { icon: 'apps', color: '#6B7280' },
+  };
+  return displays[cat] || displays.Other;
+}
+
+// Convert backend PasswordEntry to PasswordItem
+function mapPasswordEntry(entry: PasswordEntry): PasswordItem {
+  const category = entry.category || 'Other';
+  const display = getCategoryDisplay(category);
+  return {
+    id: entry.id,
+    name: entry.title,
+    email: entry.username || 'No username',
+    category: category,
+    icon: display.icon,
+    iconColor: display.color,
+    status: 'safe',
+    encryptedPassword: entry.encrypted_password,
+    notes: entry.notes,
+  };
+}
 
 const PasswordCard = ({ item, onPress }: { item: PasswordItem; onPress: () => void }) => {
   const isWarning = item.status === 'warning';
@@ -100,8 +81,8 @@ const PasswordCard = ({ item, onPress }: { item: PasswordItem; onPress: () => vo
         </View>
         <Text style={styles.cardEmail}>{item.email}</Text>
         <View style={styles.cardFooter}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{item.category}</Text>
+          <View style={[styles.categoryBadge, { backgroundColor: `${item.iconColor}15` }]}>
+            <Text style={[styles.categoryText, { color: item.iconColor }]}>{item.category}</Text>
           </View>
           <View style={styles.strengthIndicator}>
             {[1, 2, 3, 4].map((i) => (
@@ -140,6 +121,71 @@ export default function VaultScreen() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [passwordItems, setPasswordItems] = useState<PasswordItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fetch passwords from backend
+  const fetchPasswords = async () => {
+    try {
+      const entries = await passwordAPI.list();
+      const vaultKey = await storageAPI.getVaultKey();
+      
+      if (!vaultKey) {
+        Alert.alert('Error', 'Please login again');
+        setPasswordItems([]);
+        return;
+      }
+
+      const items: PasswordItem[] = [];
+      
+      for (const entry of entries) {
+        try {
+          const decrypted = await aesDecrypt(entry.encrypted_password, vaultKey);
+          const strength = validatePasswordStrength(decrypted);
+          const category = entry.category || 'Other';
+          const display = getCategoryDisplay(category);
+          
+          items.push({
+            id: entry.id,
+            name: entry.title,
+            email: entry.username || 'No username',
+            category: category,
+            icon: display.icon,
+            iconColor: display.color,
+            status: strength.isStrong ? 'safe' : 'warning',
+            encryptedPassword: entry.encrypted_password,
+            notes: entry.notes,
+          });
+        } catch (error) {
+          console.error(`Failed to decrypt password ${entry.id}:`, error);
+        }
+      }
+      
+      setPasswordItems(items);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to load passwords');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPasswords();
+  }, []);
+
+  // Refresh when screen comes back into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchPasswords();
+    }, [])
+  );
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchPasswords();
+  };
 
   const filteredItems = passwordItems.filter((item) => {
     const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
@@ -152,7 +198,7 @@ export default function VaultScreen() {
   const weakPasswords = passwordItems.filter((item) => item.status === 'warning').length;
   const strongPasswords = totalPasswords - weakPasswords;
 
-  const handlePasswordPress = (id: string) => {
+  const handlePasswordPress = (id: number) => {
     router.push(`/view-password-details?id=${id}` as any);
   };
 
@@ -177,12 +223,23 @@ export default function VaultScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <StatCard icon="key" value={`${totalPasswords}`} label="Total" color="#6B5BFF" />
-          <StatCard icon="shield-checkmark" value={`${strongPasswords}`} label="Strong" color="#10B981" />
-          <StatCard icon="warning" value={`${weakPasswords}`} label="Weak" color="#F59E0B" />
-        </View>
+        {/* Loading State */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6B5BFF" />
+            <Text style={styles.loadingText}>Loading your vault...</Text>
+          </View>
+        )}
+
+        {/* Content */}
+        {!isLoading && (
+          <>
+            {/* Stats Cards */}
+            <View style={styles.statsContainer}>
+              <StatCard icon="key" value={`${totalPasswords}`} label="Total" color="#6B5BFF" />
+              <StatCard icon="shield-checkmark" value={`${strongPasswords}`} label="Strong" color="#10B981" />
+              <StatCard icon="warning" value={`${weakPasswords}`} label="Weak" color="#F59E0B" />
+            </View>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
@@ -283,6 +340,8 @@ export default function VaultScreen() {
             </View>
           )}
         </View>
+          </>
+        )}
       </ScrollView>
     </SAView>
   );
@@ -544,5 +603,15 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     paddingHorizontal: 40,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 100,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
   },
 });

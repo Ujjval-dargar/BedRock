@@ -1,447 +1,180 @@
-import React from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, View, Text, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, View, Image, Alert } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
-import { useEffect } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import BackButton from '@/components/back-button';
 import { getWebsiteIcon, iconImageMap } from '@/utils/website-icons';
+import { passwordAPI, storageAPI } from '@/utils/api';
+import { aesDecrypt } from '@/utils/crypto';
 
-export const options = {
-  headerShown: false,
-};
-
-// Duplicate password color scheme from analytics
-const DUPLICATE_COLORS = {
-  primary: '#8B5CF6', // Vibrant purple/violet
-  light: '#EDE9FE', // Light purple background
-  iconBg: 'rgba(139, 92, 246, 0.1)', // Purple with opacity for icon background
-};
-
-// Component to render website icon (local image or MaterialIcon fallback)
-const WebsiteIcon = ({ website, size = 22 }: { website: string; size?: number }) => {
-  const iconData = getWebsiteIcon(website);
-  const domain = website.toLowerCase().replace('.com', '').replace('.net', '').replace('.org', '');
-  
-  // Check if we have a local image for this website
-  const imageSource = iconImageMap[domain];
-  
-  if (imageSource) {
-    return (
-      <Image
-        source={imageSource}
-        style={{ width: size, height: size }}
-        resizeMode="contain"
-      />
-    );
-  }
-  
-  // Use MaterialIcon as fallback
-  return (
-    <MaterialIcons
-      name={iconData.icon || 'language'}
-      size={size}
-      color={iconData.color}
-    />
-  );
-};
-
-// Mock data for duplicate passwords
-const DUPLICATE_PASSWORDS = [
-  {
-    id: 1,
-    website: 'snapchat.com',
-    email: 'user@example.com',
-    foundDate: '2024-01-15',
-    daysAgo: 2,
-  },
-  {
-    id: 2,
-    website: 'twitter.com',
-    email: 'user@example.com',
-    foundDate: '2024-01-12',
-    daysAgo: 5,
-  },
-  {
-    id: 3,
-    website: 'facebook.com',
-    email: 'user@example.com',
-    foundDate: '2024-01-10',
-    daysAgo: 7,
-  },
-  {
-    id: 4,
-    website: 'instagram.com',
-    email: 'user@example.com',
-    foundDate: '2024-01-08',
-    daysAgo: 9,
-  },
-  {
-    id: 5,
-    website: 'linkedin.com',
-    email: 'user@example.com',
-    foundDate: '2024-01-05',
-    daysAgo: 12,
-  },
-  {
-    id: 6,
-    website: 'yahoo.com',
-    email: 'user@example.com',
-    foundDate: '2024-01-03',
-    daysAgo: 14,
-  },
-  {
-    id: 7,
-    website: 'dropbox.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-30',
-    daysAgo: 18,
-  },
-  {
-    id: 8,
-    website: 'adobe.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-28',
-    daysAgo: 20,
-  },
-  {
-    id: 9,
-    website: 'ebay.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-25',
-    daysAgo: 23,
-  },
-  {
-    id: 10,
-    website: 'google.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-22',
-    daysAgo: 26,
-  },
-  {
-    id: 11,
-    website: 'amazon.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-20',
-    daysAgo: 28,
-  },
-  {
-    id: 12,
-    website: 'netflix.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-18',
-    daysAgo: 30,
-  },
-  {
-    id: 13,
-    website: 'github.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-15',
-    daysAgo: 33,
-  },
-  {
-    id: 14,
-    website: 'pinterest.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-12',
-    daysAgo: 36,
-  },
-  {
-    id: 15,
-    website: 'tumblr.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-10',
-    daysAgo: 38,
-  },
-  {
-    id: 16,
-    website: 'myspace.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-08',
-    daysAgo: 40,
-  },
-  {
-    id: 17,
-    website: 'facebook.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-05',
-    daysAgo: 43,
-  },
-  {
-    id: 18,
-    website: 'twitter.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-03',
-    daysAgo: 45,
-  },
-  {
-    id: 19,
-    website: 'instagram.com',
-    email: 'user@example.com',
-    foundDate: '2023-12-01',
-    daysAgo: 47,
-  },
-  {
-    id: 20,
-    website: 'snapchat.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-28',
-    daysAgo: 50,
-  },
-  {
-    id: 21,
-    website: 'linkedin.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-25',
-    daysAgo: 53,
-  },
-  {
-    id: 22,
-    website: 'yahoo.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-22',
-    daysAgo: 56,
-  },
-  {
-    id: 23,
-    website: 'dropbox.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-20',
-    daysAgo: 58,
-  },
-  {
-    id: 24,
-    website: 'adobe.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-18',
-    daysAgo: 60,
-  },
-  {
-    id: 25,
-    website: 'ebay.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-15',
-    daysAgo: 63,
-  },
-  {
-    id: 26,
-    website: 'google.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-12',
-    daysAgo: 66,
-  },
-  {
-    id: 27,
-    website: 'amazon.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-10',
-    daysAgo: 68,
-  },
-  {
-    id: 28,
-    website: 'netflix.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-08',
-    daysAgo: 70,
-  },
-  {
-    id: 29,
-    website: 'github.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-05',
-    daysAgo: 73,
-  },
-  {
-    id: 30,
-    website: 'pinterest.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-03',
-    daysAgo: 75,
-  },
-  {
-    id: 31,
-    website: 'tumblr.com',
-    email: 'user@example.com',
-    foundDate: '2023-11-01',
-    daysAgo: 77,
-  },
-  {
-    id: 32,
-    website: 'myspace.com',
-    email: 'user@example.com',
-    foundDate: '2023-10-30',
-    daysAgo: 79,
-  },
-  {
-    id: 33,
-    website: 'facebook.com',
-    email: 'user@example.com',
-    foundDate: '2023-10-28',
-    daysAgo: 81,
-  },
-  {
-    id: 34,
-    website: 'twitter.com',
-    email: 'user@example.com',
-    foundDate: '2023-10-25',
-    daysAgo: 84,
-  },
-  {
-    id: 35,
-    website: 'instagram.com',
-    email: 'user@example.com',
-    foundDate: '2023-10-22',
-    daysAgo: 87,
-  },
-  {
-    id: 36,
-    website: 'snapchat.com',
-    email: 'user@example.com',
-    foundDate: '2023-10-20',
-    daysAgo: 89,
-  },
-  {
-    id: 37,
-    website: 'linkedin.com',
-    email: 'user@example.com',
-    foundDate: '2023-10-18',
-    daysAgo: 91,
-  },
-];
-
-const DuplicatePasswordItem = ({
-  id,
-  website,
-  email,
-  foundDate,
-  daysAgo,
-  onChangePassword,
-}: {
+interface DuplicatePassword {
   id: number;
   website: string;
   email: string;
   foundDate: string;
-  daysAgo: number;
-  onChangePassword: (id: number) => void;
-}) => {
-  const websiteIcon = getWebsiteIcon(website);
+}
 
-  // Convert hex to rgba with opacity
-  const hexToRgba = (hex: string, opacity: number) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  };
+interface PasswordGroup {
+  password: string;
+  accounts: DuplicatePassword[];
+}
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  return (
-    <View style={styles.passwordItem}>
-      <View style={styles.passwordItemHeader}>
-        <View style={styles.websiteContainer}>
-          <View style={[styles.websiteIconContainer, { backgroundColor: hexToRgba(websiteIcon.color, 0.1) }]}>
-            <WebsiteIcon website={website} size={22} />
-          </View>
-          <ThemedText style={styles.websiteText}>{website}</ThemedText>
-        </View>
-        <View style={[styles.duplicateBadge, { backgroundColor: DUPLICATE_COLORS.light }]}>
-          <Text style={[styles.duplicateText, { color: DUPLICATE_COLORS.primary }]}>DUPLICATE</Text>
-        </View>
-      </View>
-      <View style={styles.passwordItemBody}>
-        <View style={styles.infoRow}>
-          <MaterialIcons name="email" size={16} color="#6B7280" />
-          <ThemedText style={styles.emailText}>{email}</ThemedText>
-        </View>
-        <View style={styles.infoRow}>
-          <MaterialIcons name="calendar-today" size={16} color="#6B7280" />
-          <ThemedText style={styles.dateText}>Found: {formatDate(foundDate)} ({daysAgo} days ago)</ThemedText>
-        </View>
-      </View>
-      <TouchableOpacity style={styles.changePasswordButton} onPress={() => onChangePassword(id)}>
-        <MaterialIcons name="lock-reset" size={18} color={DUPLICATE_COLORS.primary} />
-        <Text style={styles.changePasswordText}>Change Password</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
-export default function DuplicatePasswordsScreen() {
+export default function DuplicatePasswordsListScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const [duplicateGroups, setDuplicateGroups] = useState<PasswordGroup[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (navigation as any)?.setOptions?.({ headerShown: false });
+    if (navigation) {
+      navigation.setOptions({ headerShown: false });
+    }
+    fetchDuplicatePasswords();
   }, [navigation]);
 
-  const handleChangePassword = (id: number) => {
-    router.push(`/edit-password-details?id=${id}` as any);
+  const fetchDuplicatePasswords = async () => {
+    try {
+      setLoading(true);
+      const allPasswords = await passwordAPI.list();
+      const vaultKey = await storageAPI.getVaultKey();
+      
+      if (!vaultKey) {
+        Alert.alert('Error', 'Please login again');
+        return;
+      }
+
+      // Map to track password occurrences
+      const passwordMap = new Map<string, DuplicatePassword[]>();
+      
+      for (const pwd of allPasswords) {
+        try {
+          const decrypted = await aesDecrypt(pwd.encrypted_password, vaultKey);
+          
+          if (!passwordMap.has(decrypted)) {
+            passwordMap.set(decrypted, []);
+          }
+          
+          passwordMap.get(decrypted)!.push({
+            id: pwd.id,
+            website: pwd.title,
+            email: pwd.username || 'No username',
+            foundDate: pwd.created_at || new Date().toISOString(),
+          });
+        } catch (error) {
+          console.error('Failed to decrypt password:', error);
+        }
+      }
+      
+      // Filter only duplicates (password used in 2+ accounts)
+      const groups: PasswordGroup[] = [];
+      passwordMap.forEach((accounts, password) => {
+        if (accounts.length > 1) {
+          groups.push({ password, accounts });
+        }
+      });
+      
+      setDuplicateGroups(groups);
+    } catch (error: any) {
+      console.error('Failed to fetch passwords:', error);
+      Alert.alert('Error', error.message || 'Failed to load passwords');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  if (loading) {
+    return (
+      <ThemedView style={styles.safe}>
+        <View style={styles.header}>
+          <BackButton />
+          <ThemedText style={styles.title}>Duplicate Passwords</ThemedText>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <MaterialIcons name="hourglass-empty" size={64} color="#8B5CF6" />
+          <ThemedText style={{ marginTop: 16, color: '#666' }}>Loading...</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  const totalDuplicates = duplicateGroups.reduce((sum, group) => sum + group.accounts.length, 0);
+
   return (
-    <ThemedView style={styles.container}>
-      {/* Header */}
+    <ThemedView style={styles.safe}>
       <View style={styles.header}>
         <BackButton />
-        <View style={styles.headerTitleContainer}>
-          <ThemedText style={styles.headerTitle}>Duplicate Passwords</ThemedText>
-          <ThemedText style={styles.headerSubtitle}>{DUPLICATE_PASSWORDS.length} Duplicate Passwords</ThemedText>
-        </View>
-        <View style={styles.headerSpacer} />
+        <ThemedText style={styles.title}>Duplicate Passwords ({totalDuplicates})</ThemedText>
+        <View style={{ width: 36 }} />
       </View>
 
-      {/* Warning Banner */}
-      <View style={styles.warningBanner}>
-        <MaterialIcons name="warning" size={24} color={DUPLICATE_COLORS.primary} />
-        <View style={styles.warningTextContainer}>
-          <ThemedText style={styles.warningTitle}>Security Notice</ThemedText>
-          <ThemedText style={styles.warningDescription}>
-            These passwords are duplicated across multiple accounts. Using unique passwords for each account improves your security.
-          </ThemedText>
-        </View>
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{DUPLICATE_PASSWORDS.length}</Text>
-            <Text style={styles.statLabel}>Total Duplicate</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        {duplicateGroups.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="check-circle" size={64} color="#10B981" />
+            <ThemedText style={styles.emptyTitle}>No Duplicate Passwords</ThemedText>
+            <ThemedText style={styles.emptySubtitle}>
+              Great! Each password is unique to its account.
+            </ThemedText>
           </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: DUPLICATE_COLORS.primary }]}>
-              {DUPLICATE_PASSWORDS.filter((p) => p.daysAgo <= 7).length}
-            </Text>
-            <Text style={styles.statLabel}>Recent</Text>
-          </View>
-        </View>
-
-        <ThemedText style={styles.sectionTitle}>Affected Accounts</ThemedText>
-
-        {DUPLICATE_PASSWORDS.map((password) => (
-          <DuplicatePasswordItem
-            key={password.id}
-            id={password.id}
-            website={password.website}
-            email={password.email}
-            foundDate={password.foundDate}
-            daysAgo={password.daysAgo}
-            onChangePassword={handleChangePassword}
-          />
-        ))}
+        ) : (
+          <>
+            <View style={styles.warningBanner}>
+              <MaterialIcons name="content-copy" size={24} color="#8B5CF6" />
+              <View style={styles.warningTextContainer}>
+                <ThemedText style={styles.warningTitle}>Reused Passwords Detected</ThemedText>
+                <ThemedText style={styles.warningDescription}>
+                  Using the same password for multiple accounts increases security risk. Consider using unique passwords.
+                </ThemedText>
+              </View>
+            </View>
+            {duplicateGroups.map((group, groupIndex) => (
+              <View key={groupIndex} style={styles.duplicateGroup}>
+                <View style={styles.groupHeader}>
+                  <MaterialIcons name="vpn-key" size={20} color="#8B5CF6" />
+                  <ThemedText style={styles.groupTitle}>
+                    Used in {group.accounts.length} accounts
+                  </ThemedText>
+                </View>
+                {group.accounts.map((pwd) => (
+                  <TouchableOpacity
+                    key={pwd.id}
+                    style={styles.card}
+                    onPress={() => router.push({
+                      pathname: '/view-password-details',
+                      params: { id: pwd.id }
+                    })}
+                  >
+                    <View style={styles.cardHeader}>
+                      <View style={styles.iconContainer}>
+                        <Image
+                          source={iconImageMap[getWebsiteIcon(pwd.website).imagePath || 'default']}
+                          style={styles.icon}
+                        />
+                      </View>
+                      <View style={styles.textContainer}>
+                        <ThemedText style={styles.website}>{pwd.website}</ThemedText>
+                        <ThemedText style={styles.email}>{pwd.email}</ThemedText>
+                      </View>
+                      <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </>
+        )}
       </ScrollView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F2F6FB',
   },
   header: {
     flexDirection: 'row',
@@ -452,197 +185,113 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: '#fff',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '180deg' }],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 26,
+  title: {
+    fontSize: 20,
     fontWeight: '700',
-    color: DUPLICATE_COLORS.primary,
-    marginBottom: 4,
-    letterSpacing: -0.5,
+    color: '#8B5CF6',
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  headerSpacer: {
-    width: 40,
+  content: {
+    padding: 16,
+    paddingBottom: 40,
   },
   warningBanner: {
     flexDirection: 'row',
-    backgroundColor: DUPLICATE_COLORS.light,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 18,
-    borderRadius: 16,
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#DDD6FE',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#EDE9FE',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 12,
   },
   warningTextContainer: {
     flex: 1,
-    marginLeft: 12,
   },
   warningTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#5B21B6',
+    color: '#8B5CF6',
     marginBottom: 4,
   },
   warningDescription: {
     fontSize: 14,
-    color: '#6D28D9',
-    lineHeight: 20,
+    color: '#6B21A8',
   },
-  scrollView: {
+  emptyState: {
     flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 120,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    padding: 22,
-    borderRadius: 18,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  sectionTitle: {
+  emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
-    marginBottom: 18,
-    letterSpacing: -0.3,
+    color: '#10B981',
+    marginTop: 16,
+    marginBottom: 8,
   },
-  passwordItem: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: DUPLICATE_COLORS.light,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    paddingHorizontal: 32,
   },
-  passwordItemHeader: {
+  duplicateGroup: {
+    marginBottom: 24,
+  },
+  groupHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    gap: 8,
   },
-  websiteContainer: {
+  groupTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#8B5CF6',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    borderLeftWidth: 4,
+    borderLeftColor: '#8B5CF6',
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  websiteIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  websiteText: {
-    fontSize: 17,
+  icon: {
+    width: 32,
+    height: 32,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  website: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    flex: 1,
-    letterSpacing: -0.2,
+    marginBottom: 4,
   },
-  duplicateBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  duplicateText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  passwordItemBody: {
-    marginBottom: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  emailText: {
+  email: {
     fontSize: 14,
     color: '#6B7280',
-    marginLeft: 8,
-  },
-  dateText: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 8,
-  },
-  changePasswordButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: DUPLICATE_COLORS.light,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: '#DDD6FE',
-  },
-  changePasswordText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: DUPLICATE_COLORS.primary,
-    marginLeft: 6,
   },
 });
 

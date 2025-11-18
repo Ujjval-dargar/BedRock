@@ -11,102 +11,77 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import { sharingAPI, passwordAPI } from "../utils/api";
+import { useFocusEffect } from "@react-navigation/native";
 
 const Tab = createMaterialTopTabNavigator();
 
 type SharedPassword = {
-  id: string;
+  id: number;
+  entry_id: number;
   title: string;
   username: string;
   sharedWith?: string;
   sharedBy?: string;
-  permission: "view" | "edit";
+  from_user_id: number;
+  to_user_id: number;
+  status: string;
   sharedDate: string;
-  icon: string;
   category: string;
+  permission?: string;
 };
 
-// Mock data
-const sharedWithMeData: SharedPassword[] = [
-  {
-    id: "1",
-    title: "Netflix",
-    username: "family@email.com",
-    sharedBy: "john.doe@email.com",
-    permission: "view",
-    sharedDate: "2 days ago",
-    icon: "logo-netflix",
-    category: "Entertainment",
-  },
-  {
-    id: "2",
-    title: "AWS Console",
-    username: "admin@company.com",
-    sharedBy: "manager@company.com",
-    permission: "edit",
-    sharedDate: "1 week ago",
-    icon: "cloud-outline",
-    category: "Work",
-  },
-];
+const CATEGORY_ICONS: Record<string, string> = {
+  Browser: "globe-outline",
+  Social: "people-outline",
+  Work: "briefcase-outline",
+  Card: "card-outline",
+  Email: "mail-outline",
+  Other: "apps-outline",
+};
 
-const sharedByMeData: SharedPassword[] = [
-  {
-    id: "3",
-    title: "Spotify",
-    username: "myaccount@email.com",
-    sharedWith: "friend@email.com",
-    permission: "view",
-    sharedDate: "3 days ago",
-    icon: "musical-notes",
-    category: "Music",
-  },
-  {
-    id: "4",
-    title: "GitHub",
-    username: "developer@email.com",
-    sharedWith: "teammate@email.com",
-    permission: "edit",
-    sharedDate: "5 days ago",
-    icon: "logo-github",
-    category: "Development",
-  },
-];
+const CATEGORY_COLORS: Record<string, { bg: string; icon: string }> = {
+  Browser: { bg: "#EFF6FF", icon: "#3B82F6" },
+  Social: { bg: "#FCE7F3", icon: "#EC4899" },
+  Work: { bg: "#F3E8FF", icon: "#8B5CF6" },
+  Card: { bg: "#D1FAE5", icon: "#10B981" },
+  Email: { bg: "#FEF3C7", icon: "#F59E0B" },
+  Other: { bg: "#F3F4F6", icon: "#6B7280" },
+};
 
 const SharedPasswordCard = ({ item, type }: { item: SharedPassword; type: "received" | "sent" }) => {
   const router = useRouter();
 
   const handlePress = () => {
-    router.push(`/manage-sharing?id=${item.id}&type=${type}` as any);
+    if (type === "sent") {
+      // For passwords shared by me, go to manage-sharing
+      router.push(`/manage-sharing?id=${item.entry_id}&shareId=${item.id}&type=${type}` as any);
+    } else {
+      // For passwords shared with me, view the password
+      router.push(`/view-password-details?id=${item.entry_id}` as any);
+    }
   };
+
+  const iconName = CATEGORY_ICONS[item.category] || "apps-outline";
+  const categoryColors = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other;
 
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress}>
-      <View style={styles.cardIconContainer}>
-        <Ionicons name={item.icon as any} size={24} color="#6B5BFF" />
+      <View style={[styles.cardIconContainer, { backgroundColor: categoryColors.bg }]}>
+        <Ionicons name={iconName as any} size={24} color={categoryColors.icon} />
       </View>
       
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{item.title}</Text>
-          <View
-            style={[
-              styles.permissionBadge,
-              item.permission === "edit" && styles.permissionBadgeEdit,
-            ]}
-          >
+          <View style={[styles.permissionBadge, item.permission === "edit" && styles.permissionBadgeEdit]}>
             <Ionicons
-              name={item.permission === "view" ? "eye-outline" : "create-outline"}
+              name={item.permission === "edit" ? "create-outline" : "eye-outline"}
               size={12}
-              color={item.permission === "view" ? "#059669" : "#2563EB"}
+              color={item.permission === "edit" ? "#6B5BFF" : "#059669"}
             />
-            <Text
-              style={[
-                styles.permissionText,
-                item.permission === "edit" && styles.permissionTextEdit,
-              ]}
-            >
-              {item.permission === "view" ? "View" : "Edit"}
+            <Text style={[styles.permissionText, item.permission === "edit" && styles.permissionTextEdit]}>
+              {item.permission === "edit" ? "Edit" : "View"}
             </Text>
           </View>
         </View>
@@ -121,7 +96,9 @@ const SharedPasswordCard = ({ item, type }: { item: SharedPassword; type: "recei
               color="#666"
             />
             <Text style={styles.sharedText}>
-              {type === "received" ? `From ${item.sharedBy}` : `To ${item.sharedWith}`}
+              {type === "received" 
+                ? `From ${item.sharedBy || "Unknown"}` 
+                : `To ${item.sharedWith || "Unknown"}`}
             </Text>
           </View>
           <Text style={styles.dateText}>{item.sharedDate}</Text>
@@ -133,22 +110,87 @@ const SharedPasswordCard = ({ item, type }: { item: SharedPassword; type: "recei
 
 function SharedWithMeTab() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredData, setFilteredData] = useState(sharedWithMeData);
+  const [data, setData] = useState<SharedPassword[]>([]);
+  const [filteredData, setFilteredData] = useState<SharedPassword[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchSharedPasswords = async () => {
+    try {
+      setIsLoading(true);
+      const shares = await sharingAPI.getIncoming();
+      
+      // Fetch password details and sender info for each share
+      const passwordsWithDetails = await Promise.all(
+        shares.map(async (share) => {
+          try {
+            if (!share.entry_id) return null;
+            const password = await passwordAPI.get(share.entry_id);
+            
+            // Fetch sender information
+            let sharedBy = "Unknown";
+            try {
+              const sender = await sharingAPI.getUserById(share.from_user_id);
+              sharedBy = sender.username;
+            } catch {
+              // If we can't fetch sender, use "Unknown"
+            }
+            
+            return {
+              id: share.id,
+              entry_id: share.entry_id,
+              title: password.title,
+              username: password.username || "",
+              from_user_id: share.from_user_id || 0,
+              to_user_id: share.to_user_id || 0,
+              sharedBy: sharedBy,
+              status: share.status,
+              sharedDate: new Date(share.created_at).toLocaleDateString(),
+              category: password.category || "Other",
+              permission: (share as any).permission || "view",
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      
+      const validPasswords = passwordsWithDetails.filter(p => p !== null) as SharedPassword[];
+      setData(validPasswords);
+      setFilteredData(validPasswords);
+    } catch (error) {
+      console.error("Error fetching shared passwords:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchSharedPasswords();
+    }, [])
+  );
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
     if (text.trim() === "") {
-      setFilteredData(sharedWithMeData);
+      setFilteredData(data);
     } else {
-      const filtered = sharedWithMeData.filter(
-        (item) =>
+      const filtered = data.filter(
+        (item: SharedPassword) =>
           item.title.toLowerCase().includes(text.toLowerCase()) ||
-          item.username.toLowerCase().includes(text.toLowerCase()) ||
-          (item.sharedBy && item.sharedBy.toLowerCase().includes(text.toLowerCase()))
+          item.username.toLowerCase().includes(text.toLowerCase())
       );
       setFilteredData(filtered);
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.tabContainer, styles.centerContent]}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.tabContainer}>
@@ -183,22 +225,87 @@ function SharedWithMeTab() {
 
 function SharedByMeTab() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredData, setFilteredData] = useState(sharedByMeData);
+  const [data, setData] = useState<SharedPassword[]>([]);
+  const [filteredData, setFilteredData] = useState<SharedPassword[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchSharedPasswords = async () => {
+    try {
+      setIsLoading(true);
+      const shares = await sharingAPI.getOutgoing();
+      
+      // Fetch password details and recipient info for each share
+      const passwordsWithDetails = await Promise.all(
+        shares.map(async (share) => {
+          try {
+            if (!share.entry_id) return null;
+            const password = await passwordAPI.get(share.entry_id);
+            
+            // Fetch recipient information
+            let sharedWith = "Unknown";
+            try {
+              const recipient = await sharingAPI.getUserById(share.to_user_id);
+              sharedWith = recipient.username;
+            } catch {
+              // If we can't fetch recipient, use "Unknown"
+            }
+            
+            return {
+              id: share.id,
+              entry_id: share.entry_id,
+              title: password.title,
+              username: password.username || "",
+              from_user_id: share.from_user_id || 0,
+              to_user_id: share.to_user_id || 0,
+              sharedWith: sharedWith,
+              status: share.status,
+              sharedDate: new Date(share.created_at).toLocaleDateString(),
+              category: password.category || "Other",
+              permission: (share as any).permission || "view",
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      
+      const validPasswords = passwordsWithDetails.filter(p => p !== null) as SharedPassword[];
+      setData(validPasswords);
+      setFilteredData(validPasswords);
+    } catch (error) {
+      console.error("Error fetching outgoing shares:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchSharedPasswords();
+    }, [])
+  );
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
     if (text.trim() === "") {
-      setFilteredData(sharedByMeData);
+      setFilteredData(data);
     } else {
-      const filtered = sharedByMeData.filter(
-        (item) =>
+      const filtered = data.filter(
+        (item: SharedPassword) =>
           item.title.toLowerCase().includes(text.toLowerCase()) ||
-          item.username.toLowerCase().includes(text.toLowerCase()) ||
-          (item.sharedWith && item.sharedWith.toLowerCase().includes(text.toLowerCase()))
+          item.username.toLowerCase().includes(text.toLowerCase())
       );
       setFilteredData(filtered);
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.tabContainer, styles.centerContent]}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.tabContainer}>
@@ -360,7 +467,6 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 12,
-    backgroundColor: "#F0EDFF",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -442,5 +548,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
+  },
+  centerContent: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
   },
 });

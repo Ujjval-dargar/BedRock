@@ -1,39 +1,59 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI } from '../utils/api';
 
 export default function MasterPasswordScreen() {
+  const [username, setUsername] = useState('');
   const [masterPassword, setMasterPassword] = useState('');
   const [confirmMasterPassword, setConfirmMasterPassword] = useState('');
   const [showMasterPassword, setShowMasterPassword] = useState(false);
   const [showConfirmMasterPassword, setShowConfirmMasterPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleUnlock = async () => {
-    if (!masterPassword.trim() || !confirmMasterPassword.trim()) {
-      alert('Please fill in all fields');
+  const handleCreateAccount = async () => {
+    if (!username.trim() || !masterPassword.trim() || !confirmMasterPassword.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     if (masterPassword !== confirmMasterPassword) {
-      alert('Passwords do not match');
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
-    if (masterPassword.length < 8) {
-      alert('Master password must be at least 8 characters');
+    if (masterPassword.length < 12) {
+      Alert.alert('Error', 'Master password must be at least 12 characters');
       return;
     }
 
     setIsLoading(true);
-    // TODO: Implement actual master password creation logic here
-    // Navigate to authentication key screen
-    setTimeout(() => {
+    
+    try {
+      // Get email from previous screen
+      const email = await AsyncStorage.getItem('temp_signup_email');
+      if (!email) {
+        throw new Error('Email not found');
+      }
+
+      // Call signup API
+      await authAPI.signup(username, email, masterPassword);
+      
+      // Clear temporary email
+      await AsyncStorage.removeItem('temp_signup_email');
+      
+      // Show success and navigate to login
+      Alert.alert('Success', 'Account created successfully! Please login.', [
+        { text: 'OK', onPress: () => router.replace('/login' as any) }
+      ]);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create account');
+    } finally {
       setIsLoading(false);
-      router.push('/create-authentication-key' as any);
-    }, 1000);
+    }
   };
 
   return (
@@ -58,6 +78,18 @@ export default function MasterPasswordScreen() {
 
             {/* Input Fields */}
             <View style={styles.inputContainer}>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Username"
+                  placeholderTextColor="#626262"
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
@@ -105,14 +137,14 @@ export default function MasterPasswordScreen() {
               </View>
             </View>
 
-            {/* Unlock Button */}
+            {/* Create Account Button */}
             <TouchableOpacity
               style={[styles.unlockButton, isLoading && styles.unlockButtonDisabled]}
-              onPress={handleUnlock}
+              onPress={handleCreateAccount}
               disabled={isLoading}
             >
               <Text style={styles.unlockButtonText}>
-                {isLoading ? 'Processing...' : 'Unlock'}
+                {isLoading ? 'Creating Account...' : 'Create Account'}
               </Text>
             </TouchableOpacity>
           </View>

@@ -13,40 +13,76 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { sharingAPI, passwordAPI } from "../utils/api";
+import * as Crypto from "expo-crypto";
 
 type Permission = "view" | "edit";
 
 export default function SharePasswordScreen(): React.ReactElement {
   const router = useRouter();
-  useLocalSearchParams(); // passwordId from params will be used for API integration
+  const params = useLocalSearchParams();
+  const passwordId = params.id || params.passwordId; // Get password ID from params (support both 'id' and 'passwordId')
 
-  const [email, setEmail] = useState<string>("");
+  const [username, setUsername] = useState<string>("");
   const [permission, setPermission] = useState<Permission>("view");
   const [message, setMessage] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleBack = (): void => {
     router.back();
   };
 
-  const handleShare = (): void => {
-    if (!email.trim()) {
-      Alert.alert("Error", "Please enter an email address");
-      return;
-    }
-    
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert("Error", "Please enter a valid email address");
+  const handleShare = async (): Promise<void> => {
+    if (!username.trim()) {
+      Alert.alert("Error", "Please enter a username");
       return;
     }
 
-    // TODO: Implement actual sharing logic
-    Alert.alert(
-      "Success",
-      `Password shared with ${email} successfully!`,
-      [{ text: "OK", onPress: () => router.back() }]
-    );
+    if (!passwordId) {
+      Alert.alert("Error", "No password selected");
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // 1. Look up recipient by username
+      const recipient = await sharingAPI.getUserByUsername(username.trim());
+      
+      // 2. Get the password entry to encrypt
+      const passwordEntry = await passwordAPI.get(Number(passwordId));
+      
+      // 3. Encrypt the password with recipient's public key
+      // For now, we'll use a simple encryption with the encrypted password
+      // In production, you'd use the recipient's RSA public key properly
+      const encryptedKey = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        `${recipient.user_id}-${passwordId}-${Date.now()}`
+      );
+      
+      // 4. Share the password
+      await sharingAPI.share(
+        Number(passwordId),
+        recipient.user_id,
+        encryptedKey,
+        passwordEntry.encrypted_password,
+        permission
+      );
+
+      Alert.alert(
+        "Success",
+        `Password shared with ${recipient.username} successfully!`,
+        [{ text: "OK", onPress: () => router.back() }]
+      );
+    } catch (error: any) {
+      console.error("Share error:", error);
+      Alert.alert(
+        "Error",
+        error.message || "Failed to share password. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const SAView: any = SafeAreaView;
@@ -81,13 +117,12 @@ export default function SharePasswordScreen(): React.ReactElement {
           </Text>
 
           <View style={styles.card}>
-            <Text style={styles.label}>Recipient Email *</Text>
+            <Text style={styles.label}>Recipient Username *</Text>
             <TextInput
               style={styles.input}
-              placeholder="user@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
+              placeholder="username"
+              value={username}
+              onChangeText={setUsername}
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -170,9 +205,21 @@ export default function SharePasswordScreen(): React.ReactElement {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-            <Ionicons name="paper-plane-outline" size={20} color="#fff" />
-            <Text style={styles.shareButtonText}>Share Password</Text>
+          <TouchableOpacity 
+            style={[styles.shareButton, isLoading && styles.shareButtonDisabled]} 
+            onPress={handleShare}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Text style={styles.shareButtonText}>Sharing...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="paper-plane-outline" size={20} color="#fff" />
+                <Text style={styles.shareButtonText}>Share Password</Text>
+              </>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -343,6 +390,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  shareButtonDisabled: {
+    opacity: 0.6,
   },
   shareButtonText: {
     color: "#fff",

@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -9,24 +10,28 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim()) {
-      alert('Please enter your email');
+      Alert.alert('Error', 'Please enter your email');
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      alert('Please enter a valid email address');
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
     setIsLoading(true);
-    // TODO: Implement actual login logic here
-    // Navigate to login master password screen
-    setTimeout(() => {
-      setIsLoading(false);
+    
+    try {
+      // Store email temporarily for use in master password screen
+      await AsyncStorage.setItem('temp_login_email', email);
       router.push('/enter-master-password' as any);
-    }, 1000);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to proceed with login');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

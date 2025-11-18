@@ -11,12 +11,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { sharingAPI, passwordAPI } from "../utils/api";
+import { useFocusEffect } from "@react-navigation/native";
 
 type SharedUser = {
+  shareId: number;
+  userId: number;
+  username: string;
   email: string;
-  permission: "view" | "edit";
   sharedDate: string;
-  lastAccessed?: string;
+  permission: string;
 };
 
 export default function ManageSharingScreen(): React.ReactElement {
@@ -25,30 +29,62 @@ export default function ManageSharingScreen(): React.ReactElement {
   const passwordId = params.id as string;
   const type = params.type as "received" | "sent";
 
-  // Mock data
-  const [passwordInfo] = useState({
-    title: "Netflix",
-    username: "family@email.com",
-    category: "Entertainment",
-  });
-
-  const [sharedUsers, setSharedUsers] = useState<SharedUser[]>([
-    {
-      email: "friend@email.com",
-      permission: "view",
-      sharedDate: "3 days ago",
-      lastAccessed: "2 hours ago",
-    },
-    {
-      email: "family@email.com",
-      permission: "edit",
-      sharedDate: "1 week ago",
-      lastAccessed: "Yesterday",
-    },
-  ]);
-
+  const [passwordInfo, setPasswordInfo] = useState<any>(null);
+  const [sharedUsers, setSharedUsers] = useState<SharedUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [linkSharingEnabled, setLinkSharingEnabled] = useState(false);
   const [expirationEnabled, setExpirationEnabled] = useState(false);
+
+  const fetchShareData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch password info
+      const password = await passwordAPI.get(Number(passwordId));
+      setPasswordInfo({
+        title: password.title,
+        username: password.username,
+        category: password.category || "Other",
+      });
+
+      // Fetch all shares for this password
+      const shares = await sharingAPI.getPasswordShares(Number(passwordId));
+      
+      // Fetch user info for each share
+      const usersWithDetails = await Promise.all(
+        shares.map(async (share) => {
+          try {
+            const user = await sharingAPI.getUserById(share.to_user_id);
+            return {
+              shareId: share.id,
+              userId: user.user_id,
+              username: user.username,
+              email: user.email,
+              sharedDate: new Date(share.created_at).toLocaleDateString(),
+              permission: share.permission || "view",
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      
+      const validUsers = usersWithDetails.filter((u): u is SharedUser => u !== null);
+      setSharedUsers(validUsers);
+    } catch (error) {
+      console.error("Error fetching share data:", error);
+      Alert.alert("Error", "Failed to load sharing information");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchShareData();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+  );
 
   const handleBack = (): void => {
     router.back();
@@ -58,31 +94,26 @@ export default function ManageSharingScreen(): React.ReactElement {
     router.push(`/share-password?id=${passwordId}` as any);
   };
 
-  const handleRemoveUser = (email: string): void => {
+  const handleRemoveUser = async (shareId: number, username: string): Promise<void> => {
     Alert.alert(
       "Remove Access",
-      `Are you sure you want to revoke access for ${email}?`,
+      `Are you sure you want to revoke access for ${username}?`,
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Remove",
           style: "destructive",
-          onPress: () => {
-            setSharedUsers(sharedUsers.filter((u) => u.email !== email));
-            Alert.alert("Success", "Access revoked successfully");
+          onPress: async () => {
+            try {
+              await sharingAPI.deleteShare(shareId);
+              Alert.alert("Success", "Access revoked successfully");
+              fetchShareData(); // Refresh the list
+            } catch {
+              Alert.alert("Error", "Failed to revoke access");
+            }
           },
         },
       ]
-    );
-  };
-
-  const handleChangePermission = (email: string): void => {
-    setSharedUsers(
-      sharedUsers.map((user) =>
-        user.email === email
-          ? { ...user, permission: user.permission === "view" ? "edit" : "view" }
-          : user
-      )
     );
   };
 
@@ -110,6 +141,23 @@ export default function ManageSharingScreen(): React.ReactElement {
   };
 
   const SAView: any = SafeAreaView;
+
+  if (isLoading || !passwordInfo) {
+    return (
+      <SAView style={styles.safe} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBack} style={styles.iconCircle}>
+            <Ionicons name="chevron-back" size={20} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Manage Sharing</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={[styles.content, { justifyContent: "center", alignItems: "center" }]}>
+          <Text>Loading...</Text>
+        </View>
+      </SAView>
+    );
+  }
 
   return (
     <SAView style={styles.safe} edges={["top"]}>
@@ -151,43 +199,32 @@ export default function ManageSharingScreen(): React.ReactElement {
               <View key={index} style={styles.userCard}>
                 <View style={styles.userAvatar}>
                   <Text style={styles.userAvatarText}>
-                    {user.email.charAt(0).toUpperCase()}
+                    {user.username.charAt(0).toUpperCase()}
                   </Text>
                 </View>
                 
                 <View style={styles.userInfo}>
-                  <Text style={styles.userEmail}>{user.email}</Text>
+                  <Text style={styles.userEmail}>{user.username}</Text>
                   <Text style={styles.userMeta}>
-                    Shared {user.sharedDate} • Last accessed {user.lastAccessed}
+                    Shared {user.sharedDate}
                   </Text>
                 </View>
 
                 <View style={styles.userActions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.permissionPill,
-                      user.permission === "edit" && styles.permissionPillEdit,
-                    ]}
-                    onPress={() => handleChangePermission(user.email)}
-                  >
+                  <View style={styles.permissionPill}>
                     <Ionicons
-                      name={user.permission === "view" ? "eye-outline" : "create-outline"}
+                      name={user.permission === "edit" ? "create-outline" : "eye-outline"}
                       size={14}
-                      color={user.permission === "view" ? "#059669" : "#2563EB"}
+                      color={user.permission === "edit" ? "#6B5BFF" : "#059669"}
                     />
-                    <Text
-                      style={[
-                        styles.permissionPillText,
-                        user.permission === "edit" && styles.permissionPillTextEdit,
-                      ]}
-                    >
-                      {user.permission === "view" ? "View" : "Edit"}
+                    <Text style={[styles.permissionPillText, user.permission === "edit" && styles.editPermissionText]}>
+                      {user.permission === "edit" ? "Edit" : "View"}
                     </Text>
-                  </TouchableOpacity>
+                  </View>
                   
                   <TouchableOpacity
                     style={styles.removeButton}
-                    onPress={() => handleRemoveUser(user.email)}
+                    onPress={() => handleRemoveUser(user.shareId, user.username)}
                   >
                     <Ionicons name="close-circle-outline" size={24} color="#DC2626" />
                   </TouchableOpacity>
@@ -259,11 +296,15 @@ export default function ManageSharingScreen(): React.ReactElement {
             <View style={styles.receivedCard}>
               <Ionicons name="information-circle" size={24} color="#6B5BFF" />
               <View style={styles.receivedInfo}>
-                <Text style={styles.receivedTitle}>Shared by john.doe@email.com</Text>
-                <Text style={styles.receivedText}>
-                  You have {sharedUsers[0]?.permission || "view"} access to this password
+                <Text style={styles.receivedTitle}>
+                  {sharedUsers.length > 0 ? `Shared by ${sharedUsers[0].username}` : "Shared password"}
                 </Text>
-                <Text style={styles.receivedDate}>Shared 2 days ago</Text>
+                <Text style={styles.receivedText}>
+                  You have view access to this password
+                </Text>
+                <Text style={styles.receivedDate}>
+                  {sharedUsers.length > 0 ? `Shared ${sharedUsers[0].sharedDate}` : ""}
+                </Text>
               </View>
             </View>
 
@@ -278,17 +319,8 @@ export default function ManageSharingScreen(): React.ReactElement {
                 <Text style={styles.permissionItemText}>Copy password</Text>
               </View>
               <View style={styles.permissionItem}>
-                <Ionicons
-                  name={sharedUsers[0]?.permission === "edit" ? "checkmark-circle" : "close-circle"}
-                  size={20}
-                  color={sharedUsers[0]?.permission === "edit" ? "#059669" : "#D1D5DB"}
-                />
-                <Text
-                  style={[
-                    styles.permissionItemText,
-                    sharedUsers[0]?.permission !== "edit" && styles.permissionItemDisabled,
-                  ]}
-                >
+                <Ionicons name="close-circle" size={20} color="#D1D5DB" />
+                <Text style={[styles.permissionItemText, styles.permissionItemDisabled]}>
                   Edit password
                 </Text>
               </View>
@@ -466,6 +498,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#059669",
+  },
+  editPermissionText: {
+    color: "#6B5BFF",
   },
   permissionPillTextEdit: {
     color: "#2563EB",

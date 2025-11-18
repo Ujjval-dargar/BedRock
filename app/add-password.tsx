@@ -14,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
+import { passwordAPI, storageAPI } from "../utils/api";
+import { aesEncrypt } from "../utils/crypto";
 
 export default function CreatePasswordScreen(): React.ReactElement {
   const router = useRouter();
@@ -25,11 +27,12 @@ export default function CreatePasswordScreen(): React.ReactElement {
   const [password, setPassword] = useState<string>("");
   const [secure, setSecure] = useState<boolean>(true);
   const [notes, setNotes] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const categories = [
-    { label: "Browser", icon: "globe-outline", color: "#6B5BFF" },
-    { label: "Social", icon: "people-outline", color: "#8B5CF6" },
-    { label: "Work", icon: "briefcase-outline", color: "#3B82F6" },
+    { label: "Browser", icon: "globe-outline", color: "#3B82F6" },
+    { label: "Social", icon: "people-outline", color: "#EC4899" },
+    { label: "Work", icon: "briefcase-outline", color: "#8B5CF6" },
     { label: "Card", icon: "card-outline", color: "#10B981" },
     { label: "Email", icon: "mail-outline", color: "#F59E0B" },
     { label: "Other", icon: "apps-outline", color: "#6B7280" },
@@ -59,7 +62,7 @@ export default function CreatePasswordScreen(): React.ReactElement {
     Alert.alert("Copied", "Password copied to clipboard");
   };
 
-  const handleAddToVault = (): void => {
+  const handleAddToVault = async (): Promise<void> => {
     if (!title.trim()) {
       Alert.alert("Required Field", "Please enter a title");
       return;
@@ -72,27 +75,57 @@ export default function CreatePasswordScreen(): React.ReactElement {
       Alert.alert("Required Field", "Please enter a password");
       return;
     }
-    // TODO: persist the password to storage
-    Alert.alert(
-      "Success",
-      "Password saved to your vault!",
-      [
-        {
-          text: "View Vault",
-          onPress: () => router.push("/(tabs)/vault" as any),
-        },
-        {
-          text: "Add Another",
-          onPress: () => {
-            setTitle("");
-            setUsername("");
-            setPassword("");
-            setUrl("");
-            setNotes("");
+
+    setIsLoading(true);
+
+    try {
+      // Get vault key from storage
+      const vaultKey = await storageAPI.getVaultKey();
+      if (!vaultKey) {
+        Alert.alert("Error", "Please login again");
+        router.replace('/login' as any);
+        return;
+      }
+
+      // Encrypt password with vault key
+      const encryptedPassword = await aesEncrypt(password, vaultKey);
+
+      // Create password entry on backend with url and category
+      await passwordAPI.create(
+        title,
+        username || undefined,
+        encryptedPassword,
+        url || undefined,
+        category,
+        notes || undefined
+      );
+
+      Alert.alert(
+        "Success",
+        "Password saved to your vault!",
+        [
+          {
+            text: "View Vault",
+            onPress: () => router.push("/(tabs)/vault" as any),
           },
-        },
-      ]
-    );
+          {
+            text: "Add Another",
+            onPress: () => {
+              setTitle("");
+              setUsername("");
+              setPassword("");
+              setUrl("");
+              setNotes("");
+              setCategory("Browser");
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to save password");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const SAView: any = SafeAreaView;

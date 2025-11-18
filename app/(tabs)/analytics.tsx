@@ -1,11 +1,14 @@
-import React from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, View, Text } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, View, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import BackButton from '@/components/back-button';
 import Svg, { Path } from 'react-native-svg';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { passwordAPI, storageAPI } from '@/utils/api';
+import { aesDecrypt } from '@/utils/crypto';
+import { validatePasswordStrength } from '@/utils/crypto';
 
 // Helper function to create arc path
 const createArcPath = (x: number, y: number, radius: number, startAngle: number, endAngle: number) => {
@@ -146,7 +149,92 @@ const CategoryCard = ({
 
 export default function AnalyticsScreen() {
   const router = useRouter();
-  // consistent back button component
+  const [loading, setLoading] = useState(true);
+  const [passwordStats, setPasswordStats] = useState({
+    safe: 0,
+    weak: 0,
+    leaked: 0,
+    duplicate: 0,
+    total: 0,
+  });
+
+  useEffect(() => {
+    analyzePasswords();
+  }, []);
+
+  const analyzePasswords = async () => {
+    try {
+      setLoading(true);
+      const passwords = await passwordAPI.list();
+      const vaultKey = await storageAPI.getVaultKey();
+      
+      if (!vaultKey) {
+        console.error('Vault key not found');
+        return;
+      }
+
+      const decryptedPasswords: string[] = [];
+      const passwordCounts: { [key: string]: number } = {};
+      let weakCount = 0;
+      let safeCount = 0;
+
+      // Decrypt all passwords and analyze
+      for (const pwd of passwords) {
+        try {
+          const decrypted = await aesDecrypt(pwd.encrypted_password, vaultKey);
+          decryptedPasswords.push(decrypted);
+          
+          // Count duplicates
+          passwordCounts[decrypted] = (passwordCounts[decrypted] || 0) + 1;
+          
+          // Check strength
+          const strength = validatePasswordStrength(decrypted);
+          if (!strength.isStrong) {
+            weakCount++;
+          } else {
+            safeCount++;
+          }
+        } catch (error) {
+          console.error('Failed to decrypt password:', error);
+        }
+      }
+
+      // Count duplicates
+      const duplicateCount = Object.values(passwordCounts).filter(count => count > 1).length;
+
+      setPasswordStats({
+        safe: safeCount,
+        weak: weakCount,
+        leaked: 0, // Would need a breach API to check this
+        duplicate: duplicateCount,
+        total: passwords.length,
+      });
+    } catch (error: any) {
+      console.error('Failed to analyze passwords:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.header}>
+          <BackButton />
+          <ThemedText style={styles.headerTitle}>Password Health</ThemedText>
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#9333EA" />
+          <Text style={{ marginTop: 16, color: '#666' }}>Analyzing passwords...</Text>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  const score = passwordStats.total > 0 
+    ? Math.round((passwordStats.safe / passwordStats.total) * 100)
+    : 0;
 
   return (
     <ThemedView style={styles.container}>
@@ -160,14 +248,14 @@ export default function AnalyticsScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Chart Card */}
         <View style={styles.chartCard}>
-          <DonutChart score={68} />
+          <DonutChart score={score} />
         </View>
 
         {/* Category Cards */}
         <CategoryCard
           icon="check-circle"
           title="Safe Password"
-          count={44}
+          count={passwordStats.safe}
           backgroundColor={PASSWORD_COLORS.safe.light}
           iconColor={PASSWORD_COLORS.safe.primary}
           iconBg={PASSWORD_COLORS.safe.iconBg}
@@ -176,7 +264,7 @@ export default function AnalyticsScreen() {
         <CategoryCard
           icon="refresh"
           title="Weak Password"
-          count={44}
+          count={passwordStats.weak}
           backgroundColor={PASSWORD_COLORS.weak.light}
           iconColor={PASSWORD_COLORS.weak.primary}
           iconBg={PASSWORD_COLORS.weak.iconBg}
@@ -185,7 +273,7 @@ export default function AnalyticsScreen() {
         <CategoryCard
           icon="content-copy"
           title="Duplicate Password"
-          count={44}
+          count={passwordStats.duplicate}
           backgroundColor={PASSWORD_COLORS.duplicate.light}
           iconColor={PASSWORD_COLORS.duplicate.primary}
           iconBg={PASSWORD_COLORS.duplicate.iconBg}
@@ -194,7 +282,7 @@ export default function AnalyticsScreen() {
         <CategoryCard
           icon="warning"
           title="Leak Password"
-          count={12}
+          count={passwordStats.leaked}
           backgroundColor={PASSWORD_COLORS.leaked.light}
           iconColor={PASSWORD_COLORS.leaked.primary}
           iconBg={PASSWORD_COLORS.leaked.iconBg}

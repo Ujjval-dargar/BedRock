@@ -1,7 +1,7 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Platform,
   SafeAreaView,
@@ -10,9 +10,12 @@ import {
   Switch,
   Text,
   TouchableOpacity,
-  View
+  View,
+  ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { passwordAPI, storageAPI } from '../utils/api';
+import { aesDecrypt, validatePasswordStrength } from '../utils/crypto';
 
 type SettingsItem = {
   id: string;
@@ -154,8 +157,65 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const [autoFillEnabled, setAutoFillEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [passwordStats, setPasswordStats] = useState({
+    total: 0,
+    safe: 0,
+    securePercentage: 0,
+  });
 
   const profileInitials = 'SJ';
+
+  useEffect(() => {
+    analyzePasswords();
+  }, []);
+
+  const analyzePasswords = async () => {
+    try {
+      setLoading(true);
+      const passwords = await passwordAPI.list();
+      const vaultKey = await storageAPI.getVaultKey();
+      
+      if (!vaultKey) {
+        console.error('Vault key not found');
+        return;
+      }
+
+      let weakCount = 0;
+      let safeCount = 0;
+
+      // Decrypt all passwords and analyze
+      for (const pwd of passwords) {
+        try {
+          const decrypted = await aesDecrypt(pwd.encrypted_password, vaultKey);
+          
+          // Check strength
+          const strength = validatePasswordStrength(decrypted);
+          if (!strength.isStrong) {
+            weakCount++;
+          } else {
+            safeCount++;
+          }
+        } catch (error) {
+          console.error('Failed to decrypt password:', error);
+        }
+      }
+
+      const securePercentage = passwords.length > 0 
+        ? Math.round((safeCount / passwords.length) * 100)
+        : 100;
+
+      setPasswordStats({
+        total: passwords.length,
+        safe: safeCount,
+        securePercentage,
+      });
+    } catch (error: any) {
+      console.error('Failed to analyze passwords:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     // Clear any stored auth data here (AsyncStorage, SecureStore, etc.)
@@ -216,19 +276,37 @@ export default function SettingsScreen() {
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, { backgroundColor: '#F5F0FF' }]}>
-            <Ionicons name="key" size={24} color="#6F6BF5" />
-            <Text style={styles.statNumber}>129</Text>
-            <Text style={styles.statLabel}>Passwords</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#6F6BF5" />
+            ) : (
+              <>
+                <Ionicons name="key" size={24} color="#6F6BF5" />
+                <Text style={styles.statNumber}>{passwordStats.total}</Text>
+                <Text style={styles.statLabel}>Passwords</Text>
+              </>
+            )}
           </View>
           <View style={[styles.statCard, { backgroundColor: '#FEF3C7' }]}>
-            <Ionicons name="shield-checkmark" size={24} color="#F59E0B" />
-            <Text style={styles.statNumber}>124</Text>
-            <Text style={styles.statLabel}>Safe</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#F59E0B" />
+            ) : (
+              <>
+                <Ionicons name="shield-checkmark" size={24} color="#F59E0B" />
+                <Text style={styles.statNumber}>{passwordStats.safe}</Text>
+                <Text style={styles.statLabel}>Safe</Text>
+              </>
+            )}
           </View>
           <View style={[styles.statCard, { backgroundColor: '#D1FAE5' }]}>
-            <Ionicons name="lock-closed" size={24} color="#10B981" />
-            <Text style={styles.statNumber}>100%</Text>
-            <Text style={styles.statLabel}>Secure</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#10B981" />
+            ) : (
+              <>
+                <Ionicons name="lock-closed" size={24} color="#10B981" />
+                <Text style={styles.statNumber}>{passwordStats.securePercentage}%</Text>
+                <Text style={styles.statLabel}>Secure</Text>
+              </>
+            )}
           </View>
         </View>
 

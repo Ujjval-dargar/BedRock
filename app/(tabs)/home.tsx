@@ -6,7 +6,8 @@ import { SearchBar } from '@/components/search-bar';
 import { TutorialOverlay } from '@/components/tutorial-overlay';
 import { useTutorial } from '@/hooks/use-tutorial';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,6 +17,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const bottomPadding = NAV_BAR_TOTAL_HEIGHT + insets.bottom + 20;
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const {
     showTutorial,
     isLoading: tutorialLoading,
@@ -25,6 +27,13 @@ export default function HomeScreen() {
     completeTutorial,
     skipTutorial,
   } = useTutorial();
+
+  // Refresh components when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshKey(prev => prev + 1);
+    }, [])
+  );
 
   const handleLogout = () => {
     // Clear any stored auth data here (AsyncStorage, SecureStore, etc.)
@@ -46,8 +55,8 @@ export default function HomeScreen() {
         </View>
         
         <SearchBar />
-        <CategoryCards />
-        <RecentlyAdded />
+        <CategoryCards key={`categories-${refreshKey}`} />
+        <RecentlyAdded key={`recent-${refreshKey}`} />
       </ScrollView>
 
       <ProfileModal

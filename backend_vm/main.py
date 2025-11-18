@@ -1,0 +1,265 @@
+import os
+import asyncio
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
+import database, models, schemas, crud, crypto, auth
+from database import get_session
+from dotenv import load_dotenv
+from pydantic import BaseModel
+
+load_dotenv()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: try to initialize DB (but don't fail if MySQL is not available)
+    try:
+        await database.init_db()
+        print("✓ Database initialized successfully")
+    except Exception as e:
+        print(f"⚠ Warning: Could not initialize database: {e}")
+        print("  The server will start but database operations will fail.")
+        print("  Please ensure MySQL is running and configured correctly.")
+    yield
+    # Shutdown: cleanup if needed
+    pass
+
+
+app = FastAPI(title="BedRock Backend (local VM)", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class SignupIn(BaseModel):
+    username: str
+    email: str
+    master_password: str
+
+
+@app.post("/signup", response_model=schemas.UserOut)
+async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
+    existing = await crud.get_user_by_email(db, data.email)
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # hash master password for authentication
+    hashed = auth.hash_password(data.master_password)
+
+    # generate vault key and encrypt it with key derived from master password
+    vault_key = crypto.generate_vault_key()
+    salt = os.urandom(16)
+    derived = crypto.derive_key_from_password(data.master_password, salt)
+    encrypted_vault_key = crypto.aes_encrypt(derived, vault_key)
+
+    # generate RSA keys; encrypt private key with vault key
+    priv_pem, pub_pem = crypto.generate_rsa_keypair()
+    encrypted_priv = crypto.aes_encrypt(vault_key, priv_pem)
+
+    user = models.User(
+        username=data.username,
+        email=data.email,
+        master_password_hash=hashed,
+        encrypted_vault_key=encrypted_vault_key,
+        vault_salt=salt,
+        public_key_pem=pub_pem.decode(),
+        encrypted_private_key=encrypted_priv,
+    )
+
+    created = await crud.create_user(db, user)
+    return created
+
+
+@app.post("/login")
+async def login(payload: schemas.LoginIn, db: AsyncSession = Depends(get_session)):
+    user = await crud.get_user_by_email(db, payload.email)
+    if not user:
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    if not auth.verify_password(payload.master_password, user.master_password_hash):
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+
+    # Return a token with user id; do not reveal vault key plain. Client should use master password to derive key and decrypt vault key.
+    access_token = auth.create_access_token({"sub": str(user.id)})
+    return JSONResponse({"access_token": access_token, "token_type": "bearer", "encrypted_vault_key": user.encrypted_vault_key.hex(), "vault_salt": user.vault_salt.hex(), "public_key_pem": user.public_key_pem})
+
+
+@app.get("/me", response_model=schemas.UserOut)
+async def me(current: models.User = Depends(auth.get_current_user)):
+    return current
+
+
+@app.post("/passwords", response_model=schemas.PasswordEntryOut)
+async def create_password(entry: schemas.PasswordEntryCreate, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    # Server stores encrypted_password blob as-is
+    pe = models.PasswordEntry(
+        owner_id=current.id,
+        title=entry.title,
+        username=entry.username,
+        encrypted_password=entry.encrypted_password,
+        url=entry.url,
+        category=entry.category,
+        notes=entry.notes,
+    )
+    created = await crud.create_password_entry(db, pe)
+    return created
+
+
+@app.get("/passwords", response_model=list[schemas.PasswordEntryOut])
+async def list_passwords(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    items = await crud.get_passwords_for_user(db, current.id)
+    return items
+
+
+@app.get("/passwords/{password_id}", response_model=schemas.PasswordEntryOut)
+async def get_password(password_id: int, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    password = await crud.get_password_entry(db, password_id)
+    if not password:
+        raise HTTPException(status_code=404, detail="Password not found")
+    
+    # Check if user is owner or has access via sharing
+    if password.owner_id != current.id:
+        # Check if password is shared with this user
+        shared = await crud.get_share_for_user_and_password(db, current.id, password_id)
+        if not shared:
+            raise HTTPException(status_code=404, detail="Password not found")
+    
+    return password
+
+
+@app.put("/passwords/{password_id}", response_model=schemas.PasswordEntryOut)
+async def update_password(password_id: int, entry: schemas.PasswordEntryCreate, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    password = await crud.get_password_entry(db, password_id)
+    if not password:
+        raise HTTPException(status_code=404, detail="Password not found")
+    
+    # Check if user is owner or has edit permission via sharing
+    if password.owner_id != current.id:
+        shared = await crud.get_share_for_user_and_password(db, current.id, password_id)
+        if not shared or shared.permission != "edit":
+            raise HTTPException(status_code=403, detail="You don't have permission to edit this password")
+    
+    password.title = entry.title
+    password.username = entry.username
+    password.encrypted_password = entry.encrypted_password
+    password.url = entry.url
+    password.category = entry.category
+    password.notes = entry.notes
+    
+    updated = await crud.update_password_entry(db, password)
+    return updated
+
+
+@app.delete("/passwords/{password_id}")
+async def delete_password(password_id: int, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    password = await crud.get_password_entry(db, password_id)
+    if not password or password.owner_id != current.id:
+        raise HTTPException(status_code=404, detail="Password not found")
+    
+    success = await crud.delete_password_entry(db, password_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Password not found")
+    return {"status": "deleted", "id": password_id}
+
+
+@app.post("/share", response_model=schemas.ShareOut)
+async def share_password(share: schemas.ShareCreate, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    # Ensure recipient exists
+    recipient = await crud.get_user_by_id(db, share.to_user_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+
+    sp = models.SharedPassword(
+        entry_id=share.entry_id,
+        from_user_id=current.id,
+        to_user_id=share.to_user_id,
+        encrypted_key_for_recipient=share.encrypted_key_for_recipient,
+        encrypted_password=share.encrypted_password,
+        permission=share.permission or "view",
+        status="pending",
+    )
+    created = await crud.create_shared_password(db, sp)
+    return created
+
+
+@app.get("/shared/incoming", response_model=list[schemas.ShareOut])
+async def incoming_shares(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    items = await crud.get_incoming_shares(db, current.id)
+    return items
+
+
+@app.post("/shared/{share_id}/accept")
+async def accept_share(share_id: int, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    share = await crud.update_share_status(db, share_id, "accepted")
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    return {"status": "accepted"}
+
+
+@app.get("/users/{user_id}/public_key")
+async def get_public_key(user_id: int, db: AsyncSession = Depends(get_session)):
+    user = await crud.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"user_id": user.id, "public_key_pem": user.public_key_pem}
+
+
+@app.get("/users/{user_id}")
+async def get_user_info(user_id: int, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    user = await crud.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"user_id": user.id, "username": user.username, "email": user.email}
+
+
+@app.get("/users/by-username/{username}")
+async def get_user_by_username(username: str, db: AsyncSession = Depends(get_session)):
+    user = await crud.get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"user_id": user.id, "username": user.username, "email": user.email, "public_key_pem": user.public_key_pem}
+
+
+@app.get("/shared/outgoing", response_model=list[schemas.ShareOut])
+async def outgoing_shares(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    items = await crud.get_outgoing_shares(db, current.id)
+    return items
+
+
+@app.get("/passwords/{password_id}/shares", response_model=list[schemas.ShareOut])
+async def get_password_shares(password_id: int, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    # Verify the user owns this password
+    password = await crud.get_password_entry(db, password_id)
+    if not password or password.owner_id != current.id:
+        raise HTTPException(status_code=404, detail="Password not found")
+    
+    # Get all shares for this password
+    items = await crud.get_shares_for_password(db, password_id)
+    return items
+
+
+@app.delete("/shared/{share_id}")
+async def delete_share(share_id: int, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    # Get the share
+    share = await crud.get_share_by_id(db, share_id)
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    
+    # Only the owner can delete shares
+    if share.from_user_id != current.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await crud.delete_share(db, share_id)
+    return {"status": "deleted", "id": share_id}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("backend_vm.main:app", host="0.0.0.0", port=8000, reload=True)

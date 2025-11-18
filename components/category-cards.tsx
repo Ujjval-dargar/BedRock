@@ -1,5 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
+import { passwordAPI } from '../utils/api';
 
 interface CategoryCard {
  title: string;
@@ -9,29 +11,130 @@ interface CategoryCard {
  secondaryIcon?: keyof typeof MaterialIcons.glyphMap;
 }
 
-const categories: CategoryCard[] = [
- {
-  title: 'Browser',
-  count: '129 Password',
-  backgroundColor: '#6F6BF5',
-  icon: 'public',
-  secondaryIcon: 'search',
- },
-  {
-    title: 'Apps',
-    count: '45 Password',
-    backgroundColor: '#FDCD30',
-    icon: 'phone-android',
-  },
-  {
-    title: 'Card',
-    count: '5 Details',
-    backgroundColor: '#7CD4B2',
-    icon: 'account-balance-wallet',
-  },
-];
-
 export function CategoryCards() {
+  const [categories, setCategories] = useState<CategoryCard[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPasswordCounts();
+  }, []);
+
+  const fetchPasswordCounts = async () => {
+    try {
+      setLoading(true);
+      const passwords = await passwordAPI.list();
+      
+      // Count passwords by category
+      const categoryCounts = {
+        Browser: 0,
+        Social: 0,
+        Work: 0,
+        Card: 0,
+        Email: 0,
+        Other: 0,
+      };
+
+      passwords.forEach((pwd) => {
+        const category = pwd.category || 'Other';
+        if (category in categoryCounts) {
+          categoryCounts[category as keyof typeof categoryCounts]++;
+        } else {
+          categoryCounts.Other++;
+        }
+      });
+      
+      setCategories([
+        {
+          title: 'Browser',
+          count: `${categoryCounts.Browser} Password${categoryCounts.Browser !== 1 ? 's' : ''}`,
+          backgroundColor: '#3B82F6',
+          icon: 'public',
+        },
+        {
+          title: 'Social',
+          count: `${categoryCounts.Social} Password${categoryCounts.Social !== 1 ? 's' : ''}`,
+          backgroundColor: '#EC4899',
+          icon: 'people',
+        },
+        {
+          title: 'Work',
+          count: `${categoryCounts.Work} Password${categoryCounts.Work !== 1 ? 's' : ''}`,
+          backgroundColor: '#8B5CF6',
+          icon: 'business-center',
+        },
+        {
+          title: 'Card',
+          count: `${categoryCounts.Card} Password${categoryCounts.Card !== 1 ? 's' : ''}`,
+          backgroundColor: '#10B981',
+          icon: 'account-balance-wallet',
+        },
+        {
+          title: 'Email',
+          count: `${categoryCounts.Email} Password${categoryCounts.Email !== 1 ? 's' : ''}`,
+          backgroundColor: '#F59E0B',
+          icon: 'email',
+        },
+        {
+          title: 'Other',
+          count: `${categoryCounts.Other} Password${categoryCounts.Other !== 1 ? 's' : ''}`,
+          backgroundColor: '#6B7280',
+          icon: 'apps',
+        },
+      ]);
+    } catch (error: any) {
+      console.error('Failed to fetch password counts:', error);
+      // Show default values on error
+      setCategories([
+        {
+          title: 'Browser',
+          count: '0 Password',
+          backgroundColor: '#3B82F6',
+          icon: 'public',
+        },
+        {
+          title: 'Social',
+          count: '0 Password',
+          backgroundColor: '#EC4899',
+          icon: 'people',
+        },
+        {
+          title: 'Work',
+          count: '0 Password',
+          backgroundColor: '#8B5CF6',
+          icon: 'business-center',
+        },
+        {
+          title: 'Card',
+          count: '0 Password',
+          backgroundColor: '#10B981',
+          icon: 'account-balance-wallet',
+        },
+        {
+          title: 'Email',
+          count: '0 Password',
+          backgroundColor: '#F59E0B',
+          icon: 'email',
+        },
+        {
+          title: 'Other',
+          count: '0 Password',
+          backgroundColor: '#6B7280',
+          icon: 'apps',
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={{ padding: 40, alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#6F6BF5" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       horizontal

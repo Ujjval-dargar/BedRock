@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
@@ -9,24 +10,29 @@ export default function SignupScreen() {
 
   const handleSignup = async () => {
     if (!email.trim()) {
-      alert('Please enter your email');
+      Alert.alert('Error', 'Please enter your email');
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      alert('Please enter a valid email address');
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
     setIsLoading(true);
-    // TODO: Implement actual signup logic here - send email verification
-    // For now, navigate to verification screen
-    setTimeout(() => {
+    
+    try {
+      // Store email temporarily for later signup steps
+      await AsyncStorage.setItem('temp_signup_email', email);
+      // Navigate to username screen (you can add this or go directly to master password)
+      router.push('/create-master-password' as any);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to proceed with signup');
+    } finally {
       setIsLoading(false);
-      router.push('/email-verification' as any);
-    }, 1000);
+    }
   };
 
   return (

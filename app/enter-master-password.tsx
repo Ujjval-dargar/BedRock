@@ -1,8 +1,11 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI, storageAPI } from '../utils/api';
+import { decryptVaultKey } from '../utils/crypto';
 
 export default function LoginMasterPasswordScreen() {
   const [masterPassword, setMasterPassword] = useState('');
@@ -11,17 +14,42 @@ export default function LoginMasterPasswordScreen() {
 
   const handleUnlock = async () => {
     if (!masterPassword.trim()) {
-      alert('Please enter your master password');
+      Alert.alert('Error', 'Please enter your master password');
       return;
     }
 
     setIsLoading(true);
-    // TODO: Implement actual master password verification logic here
-    // Navigate to home screen after successful login
-    setTimeout(() => {
-      setIsLoading(false);
+    
+    try {
+      // Get email from previous screen
+      const email = await AsyncStorage.getItem('temp_login_email');
+      if (!email) {
+        throw new Error('Email not found');
+      }
+
+      // Call login API
+      const response = await authAPI.login(email, masterPassword);
+      
+      // Derive vault key from master password and decrypt the encrypted vault key
+      const vaultKey = await decryptVaultKey(
+        response.encrypted_vault_key,
+        masterPassword,
+        response.vault_salt
+      );
+      
+      // Store vault key securely
+      await storageAPI.setVaultKey(vaultKey);
+      
+      // Clear temporary email
+      await AsyncStorage.removeItem('temp_login_email');
+      
+      // Navigate to home screen
       router.replace('/(tabs)/home' as any);
-    }, 1000);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Invalid master password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleBiometric = () => {
