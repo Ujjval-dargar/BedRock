@@ -1,0 +1,33 @@
+[Unit]
+Description=BedRock FastAPI Backend
+After=network.target
+Documentation=https://github.com/nipunagg2604/BedRock
+
+[Service]
+Type=simple
+User=bedrock
+Group=bedrock
+WorkingDirectory=/home/bedrock/BedRock/backend_vm
+EnvironmentFile=/home/bedrock/BedRock/backend_vm/.env
+
+# Main service execution
+ExecStart=/home/bedrock/BedRock/backend_vm/.venv/bin/uvicorn backend_vm.main:app --host 0.0.0.0 --port 8000 --workers 1
+
+# Restart policy
+Restart=always
+RestartSec=5
+
+# Security settings (optional, but recommended)
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bedrock-backend
+
+# Resource limits (optional)
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
