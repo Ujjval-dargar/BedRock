@@ -6,20 +6,12 @@ import { API_CONFIG } from '../config';
 
 // Determine the correct API URL based on environment
 const getApiUrl = () => {
-  // First, try to use the configured URL if on physical device
-  if (API_CONFIG.BASE_URL && !__DEV__) {
+  // Always use the configured BASE_URL in development
+  if (API_CONFIG.BASE_URL) {
     return API_CONFIG.BASE_URL;
   }
   
-  // If running on physical device in dev mode, use your Mac's IP
-  const debuggerHost = Constants.expoConfig?.hostUri?.split(':').shift();
-  
-  if (debuggerHost && !debuggerHost.includes('localhost') && !debuggerHost.includes('127.0.0.1')) {
-    // Physical device - use Mac's IP
-    return `http://${debuggerHost}:8000`;
-  }
-  
-  // Simulator/Emulator
+  // Fallback to localhost for simulators/emulators
   return Platform.select({
     ios: 'http://localhost:8000',
     android: 'http://10.0.2.2:8000',
@@ -94,17 +86,28 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const url = `${API_BASE_URL}${endpoint}`;
+  console.log('🌐 API Request:', url);
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(error.detail || `HTTP ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    console.log('📡 API Response:', response.status, endpoint);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      console.error('❌ API Error:', error);
+      throw new Error(error.detail || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('🔥 Network Error:', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 // Auth APIs
