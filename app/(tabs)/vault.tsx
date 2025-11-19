@@ -1,6 +1,6 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   ScrollView,
@@ -9,12 +9,18 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  View as RNView,
   Alert,
   ActivityIndicator,
+  findNodeHandle,
+  UIManager,
+  Dimensions,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { passwordAPI, PasswordEntry, storageAPI } from '../../utils/api';
 import { aesDecrypt, validatePasswordStrength } from '../../utils/crypto';
+import { ActionMenu } from '@/components/action-menu';
 
 type PasswordItem = {
   id: number;
@@ -61,11 +67,21 @@ function mapPasswordEntry(entry: PasswordEntry): PasswordItem {
   };
 }
 
-const PasswordCard = ({ item, onPress }: { item: PasswordItem; onPress: () => void }) => {
+const PasswordCard = ({ 
+  item, 
+  onPress, 
+  onMenuPress, 
+  menuButtonRef 
+}: { 
+  item: PasswordItem; 
+  onPress: () => void;
+  onMenuPress: () => void;
+  menuButtonRef: (ref: any) => void;
+}) => {
   const isWarning = item.status === 'warning';
   
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+    <Pressable style={styles.card} onPress={onPress}>
       <View style={[styles.cardIconContainer, { backgroundColor: `${item.iconColor}15` }]}>
         <FontAwesome name={item.icon as any} size={24} color={item.iconColor} />
       </View>
@@ -100,10 +116,18 @@ const PasswordCard = ({ item, onPress }: { item: PasswordItem; onPress: () => vo
         </View>
       </View>
 
-      <TouchableOpacity style={styles.moreButton}>
-        <Ionicons name="ellipsis-vertical" size={20} color="#9CA3AF" />
-      </TouchableOpacity>
-    </TouchableOpacity>
+      <RNView
+        ref={menuButtonRef}
+        collapsable={false}
+      >
+        <Pressable 
+          style={styles.moreButton} 
+          onPress={onMenuPress}
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color="#9CA3AF" />
+        </Pressable>
+      </RNView>
+    </Pressable>
   );
 };
 
@@ -124,6 +148,11 @@ export default function VaultScreen() {
   const [passwordItems, setPasswordItems] = useState<PasswordItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const buttonRefs = useRef<{ [key: number]: any }>({});
+  const rootRef = useRef<any>(null);
 
   // Fetch passwords from backend
   const fetchPasswords = async () => {
@@ -206,10 +235,85 @@ export default function VaultScreen() {
     router.push('/(password-management)/add-password' as any);
   };
 
+  const handleMenuPress = (id: number) => {
+    const buttonRef = buttonRefs.current[id];
+    const rootNode = rootRef.current ? findNodeHandle(rootRef.current) : null;
+    const node = buttonRef ? findNodeHandle(buttonRef) : null;
+    
+    if (!node || !rootNode) return;
+
+    UIManager.measureLayout(
+      node,
+      rootNode,
+      () => {},
+      (left: number, top: number, width: number, height: number) => {
+        const { height: screenH, width: screenW } = Dimensions.get('window');
+        const menuWidth = 140;
+        const menuHeight = 120;
+
+        // Position menu BELOW the button and aligned to the RIGHT
+        let xPos = left + width - menuWidth;  // Align menu's right edge with button's right edge
+        let yPos = top + height + 4;  // Position below the button
+
+        // Make sure menu doesn't go off screen to the left
+        if (xPos < 8) {
+          xPos = 8;
+        }
+
+        // Only show above if there's really not enough space (account for bottom nav)
+        const bottomSafeZone = 100; // Account for bottom navigation
+        if (yPos + menuHeight > screenH - bottomSafeZone) {
+          // Still not enough space, just position it as low as possible
+          yPos = Math.min(top + height + 4, screenH - menuHeight - bottomSafeZone);
+        }
+
+        setMenuPosition({ x: xPos, y: yPos });
+        setSelectedItemId(id);
+        setMenuVisible(true);
+      }
+    );
+  };
+
+  const handleEdit = () => {
+    if (selectedItemId !== null) {
+      setMenuVisible(false);
+      router.push(`/(password-management)/edit-password-details?id=${encodeURIComponent(selectedItemId)}` as any);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedItemId !== null) {
+      const item = passwordItems.find(p => p.id === selectedItemId);
+      if (!item) return;
+      
+      setMenuVisible(false);
+      Alert.alert(
+        'Delete Password',
+        `Are you sure you want to delete "${item.name}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await passwordAPI.delete(item.id);
+                await fetchPasswords(); // Refresh the list
+                Alert.alert('Success', 'Password deleted successfully');
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to delete password');
+              }
+            },
+          },
+        ]
+      );
+    }
+  };
+
   const SAView: any = SafeAreaView;
 
   return (
-    <SAView style={styles.safe} edges={['top']}>
+    <SAView style={styles.safe} edges={['top']} ref={rootRef}>
       <View style={styles.header}>
         <View style={{ width: 36 }} />
         <Text style={styles.headerTitle}>My Vault</Text>
@@ -326,6 +430,10 @@ export default function VaultScreen() {
                 key={item.id}
                 item={item}
                 onPress={() => handlePasswordPress(item.id)}
+                onMenuPress={() => handleMenuPress(item.id)}
+                menuButtonRef={(ref: any) => {
+                  buttonRefs.current[item.id] = ref;
+                }}
               />
             ))
           ) : (
@@ -341,6 +449,14 @@ export default function VaultScreen() {
           </>
         )}
       </ScrollView>
+
+      <ActionMenu
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        position={menuPosition}
+      />
     </SAView>
   );
 }
