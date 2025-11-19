@@ -2,30 +2,15 @@ import { StyleSheet, View, Pressable, Text } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { authAPI } from '../utils/api';
 
 interface HomeHeaderProps {
   onProfilePress: () => void;
+  username?: string;
 }
 
-export function HomeHeader({ onProfilePress }: HomeHeaderProps) {
+export function HomeHeader({ onProfilePress, username = 'User' }: HomeHeaderProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [username, setUsername] = useState('User');
-
-  useEffect(() => {
-    fetchUserData();
-  }, []);
-
-  const fetchUserData = async () => {
-    try {
-      const user = await authAPI.getMe();
-      setUsername(user.username);
-    } catch (error) {
-      console.error('Failed to fetch user data:', error);
-    }
-  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>

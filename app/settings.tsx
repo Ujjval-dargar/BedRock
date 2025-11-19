@@ -11,11 +11,13 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { passwordAPI, storageAPI, authAPI } from '../utils/api';
 import { aesDecrypt, validatePasswordStrength } from '../utils/crypto';
+import { EditProfileModal } from '../components/edit-profile-modal';
 
 type SettingsItem = {
   id: string;
@@ -160,6 +162,7 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [passwordStats, setPasswordStats] = useState({
     total: 0,
     safe: 0,
@@ -236,6 +239,18 @@ export default function SettingsScreen() {
     router.replace('/welcome' as any);
   };
 
+  const handleSaveProfile = async (newUsername: string, newEmail: string) => {
+    try {
+      await authAPI.updateMe(newUsername, newEmail);
+      setUsername(newUsername);
+      setEmail(newEmail);
+      Alert.alert('Success', 'Your profile has been updated successfully!');
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      throw new Error(error.message || 'Failed to update profile');
+    }
+  };
+
   const handleItemPress = (itemId: string) => {
     console.log('Pressed:', itemId);
     // Handle navigation based on itemId
@@ -281,7 +296,11 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
-          <TouchableOpacity style={styles.editButton} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={styles.editButton} 
+            activeOpacity={0.7}
+            onPress={() => setEditModalVisible(true)}
+          >
             <Ionicons name="create-outline" size={20} color="#6F6BF5" />
           </TouchableOpacity>
         </View>
@@ -391,6 +410,14 @@ export default function SettingsScreen() {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <EditProfileModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        currentUsername={username}
+        currentEmail={email}
+        onSave={handleSaveProfile}
+      />
     </View>
   );
 }

@@ -207,6 +207,17 @@ export const authAPI = {
     return await fetchAPI('/me');
   },
 
+  async updateMe(username?: string, email?: string): Promise<User> {
+    const body: { username?: string; email?: string } = {};
+    if (username) body.username = username;
+    if (email) body.email = email;
+    
+    return await fetchAPI('/me', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+  },
+
   async logout() {
     await AsyncStorage.multiRemove([
       STORAGE_KEYS.TOKEN,

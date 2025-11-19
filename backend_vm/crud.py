@@ -26,6 +26,13 @@ async def create_user(db: AsyncSession, user: models.User) -> models.User:
     return user
 
 
+async def update_user(db: AsyncSession, user: models.User) -> models.User:
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
 async def create_password_entry(db: AsyncSession, entry: models.PasswordEntry) -> models.PasswordEntry:
     db.add(entry)
     await db.commit()

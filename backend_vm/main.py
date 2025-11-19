@@ -169,6 +169,32 @@ async def me(current: models.User = Depends(auth.get_current_user)):
     return current
 
 
+@app.put("/me", response_model=schemas.UserOut)
+async def update_me(
+    user_update: schemas.UserUpdate, 
+    current: models.User = Depends(auth.get_current_user),
+    db: AsyncSession = Depends(get_session)
+):
+    """Update current user's username and/or email."""
+    # Check if username is being changed and if it's already taken
+    if user_update.username and user_update.username != current.username:
+        existing = await crud.get_user_by_username(db, user_update.username)
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+        current.username = user_update.username
+    
+    # Check if email is being changed and if it's already registered
+    if user_update.email and user_update.email != current.email:
+        existing = await crud.get_user_by_email(db, user_update.email)
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        current.email = user_update.email
+    
+    # Update the user in database
+    updated_user = await crud.update_user(db, current)
+    return updated_user
+
+
 @app.post("/passwords", response_model=schemas.PasswordEntryOut)
 async def create_password(entry: schemas.PasswordEntryCreate, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
     # Server stores encrypted_password blob as-is

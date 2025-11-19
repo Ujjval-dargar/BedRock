@@ -61,7 +61,10 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <HomeHeader onProfilePress={() => setProfileModalVisible(true)} />
+      <HomeHeader 
+        onProfilePress={() => setProfileModalVisible(true)} 
+        username={username}
+      />
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
