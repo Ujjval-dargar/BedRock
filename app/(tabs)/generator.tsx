@@ -16,6 +16,7 @@ const Slider: any = (require('@react-native-community/slider') as any).default ?
 import * as Clipboard from "expo-clipboard";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 export default function GeneratorScreen(): React.ReactElement {
   const router = useRouter();
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: BOTTOM_SAFE_AREA,
   },
   passwordCard: {
     backgroundColor: "#fff",

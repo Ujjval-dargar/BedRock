@@ -8,6 +8,7 @@ import BackButton from '@/components/back-button';
 import { getWebsiteIcon, iconImageMap } from '@/utils/website-icons';
 import { passwordAPI, storageAPI } from '@/utils/api';
 import { aesDecrypt } from '@/utils/crypto';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 interface DuplicatePassword {
   id: number;
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: BOTTOM_SAFE_AREA,
   },
   warningBanner: {
     flexDirection: 'row',

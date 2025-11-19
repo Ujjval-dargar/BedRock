@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { passwordAPI, storageAPI, sharingAPI } from "../../utils/api";
 import { aesDecrypt, aesEncrypt } from "../../utils/crypto";
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 export default function EditPasswordScreen(props: any): React.ReactElement {
   const { route, navigation } = props || {};
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: BOTTOM_SAFE_AREA,
   },
   card: {
     backgroundColor: "#fff",

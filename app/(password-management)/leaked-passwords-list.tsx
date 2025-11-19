@@ -5,6 +5,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import BackButton from '@/components/back-button';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 // Note: Detecting leaked passwords requires integration with breach detection APIs like HaveIBeenPwned
 // For now, this screen shows an empty state
@@ -60,6 +61,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+    paddingBottom: BOTTOM_SAFE_AREA,
   },
   emptyState: {
     flex: 1,

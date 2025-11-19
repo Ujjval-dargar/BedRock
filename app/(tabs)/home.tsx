@@ -12,11 +12,11 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { authAPI } from '@/utils/api';
 
-const NAV_BAR_TOTAL_HEIGHT = 90; // Navigation bar height + FAB overlap + margin
+const NAV_BAR_TOTAL_HEIGHT = 80; // Navigation bar height + safe area
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const bottomPadding = NAV_BAR_TOTAL_HEIGHT + insets.bottom + 20;
+  const bottomPadding = NAV_BAR_TOTAL_HEIGHT + insets.bottom;
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [username, setUsername] = useState('');

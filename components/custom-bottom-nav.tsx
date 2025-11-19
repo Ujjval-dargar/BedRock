@@ -22,7 +22,8 @@ const navItems: NavItem[] = [
 const PRIMARY_COLOR = '#6F6BF5'; // Active tab color
 const INACTIVE_COLOR = '#9E9E9E'; // Light gray
 const FAB_SIZE = 56;
-const NAV_BAR_HEIGHT = 70;
+const NAV_BAR_HEIGHT = 60;
+const ICON_SIZE = 26;
 
 interface CustomBottomNavProps {
   onFABPress?: () => void;
@@ -83,8 +84,8 @@ export default function CustomBottomNav({ onFABPress }: CustomBottomNavProps) {
   const rightItems = navItems.slice(2);
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <View style={styles.navBar}>
+    <View style={styles.container}>
+      <View style={[styles.navBar, { paddingBottom: insets.bottom }]}>
         <View style={styles.leftSection}>
           {leftItems.map((item) => {
             const active = isActive(item.route);
@@ -96,7 +97,7 @@ export default function CustomBottomNav({ onFABPress }: CustomBottomNavProps) {
               >
                 <MaterialIcons
                   name={item.icon}
-                  size={24}
+                  size={ICON_SIZE}
                   color={active ? PRIMARY_COLOR : INACTIVE_COLOR}
                 />
                 <Text
@@ -133,7 +134,7 @@ export default function CustomBottomNav({ onFABPress }: CustomBottomNavProps) {
               >
                 <MaterialIcons
                   name={item.icon}
-                  size={24}
+                  size={ICON_SIZE}
                   color={active ? PRIMARY_COLOR : INACTIVE_COLOR}
                 />
                 <Text
@@ -163,15 +164,14 @@ const styles = StyleSheet.create({
   },
   navBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    height: NAV_BAR_HEIGHT,
-    borderRadius: 20,
-    marginHorizontal: 16,
-    marginBottom: 8,
+    backgroundColor: '#F5F0FF',
+    minHeight: NAV_BAR_HEIGHT,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: -2,
     },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
+    paddingTop: 0,
     position: 'relative',
   },
   leftSection: {
@@ -196,13 +197,14 @@ const styles = StyleSheet.create({
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
     paddingHorizontal: 4,
     flex: 1,
     maxWidth: 80,
+    paddingTop: 12,
+    paddingBottom: 0,
   },
   navLabel: {
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 4,
     fontWeight: '500',
   },

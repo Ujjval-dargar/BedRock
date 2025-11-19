@@ -16,6 +16,7 @@ import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { passwordAPI, storageAPI } from "../../utils/api";
 import { aesEncrypt } from "../../utils/crypto";
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 export default function CreatePasswordScreen(): React.ReactElement {
   const router = useRouter();
@@ -334,7 +335,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: BOTTOM_SAFE_AREA,
   },
   card: {
     backgroundColor: "#fff",
