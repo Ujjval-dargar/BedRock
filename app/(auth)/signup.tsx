@@ -24,11 +24,10 @@ export default function SignupScreen() {
     setIsLoading(true);
     
     try {
-      // Store email temporarily for later signup steps
       await AsyncStorage.setItem('temp_signup_email', email);
-      // Navigate to username screen (you can add this or go directly to master password)
       router.push('/(auth)/create-master-password' as any);
-    } catch (error) {
+    } 
+    catch (error) {
       Alert.alert('Error', 'Failed to proceed with signup');
     } finally {
       setIsLoading(false);
@@ -92,7 +91,7 @@ export default function SignupScreen() {
             </View>
 
             {/* Mobile Number Signup Link */}
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
               style={styles.mobileLink}
               onPress={() => {
                 // TODO: Navigate to mobile number signup
@@ -100,7 +99,8 @@ export default function SignupScreen() {
               }}
             >
               <Text style={styles.mobileLinkText}>Or Sign up with Mobile Number</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

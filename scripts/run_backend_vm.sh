@@ -84,6 +84,11 @@ if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
     python3 -m venv .venv
     echo -e "${GREEN}✓ Virtual environment created${NC}\n"
+elif [ ! -f ".venv/bin/activate" ]; then
+    echo -e "${YELLOW}⚠ Virtual environment corrupted, recreating...${NC}"
+    rm -rf .venv
+    python3 -m venv .venv
+    echo -e "${GREEN}✓ Virtual environment recreated${NC}\n"
 else
     echo -e "${GREEN}✓ Virtual environment already exists${NC}\n"
 fi
