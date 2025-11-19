@@ -1,30 +1,45 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { authAPI } from '../../utils/api';
 
-export default function ForgotPasswordScreen() {
-  const [authCode, setAuthCode] = useState('');
+export default function ForgotPasswordVerifyScreen() {
+  const params = useLocalSearchParams();
+  const email = params.email as string || '';
+  
+  const [recoveryKey, setRecoveryKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleVerify = async () => {
-    if (!authCode.trim()) {
-      alert('Please enter the authentication code');
+    if (!recoveryKey.trim()) {
+      Alert.alert('Error', 'Please enter your recovery key');
       return;
     }
 
-    if (authCode.length < 4) {
-      alert('Please enter a valid authentication code');
+    // Validate format: XXXX-XXXX-XXXX-XXXX
+    const cleanKey = recoveryKey.toUpperCase().trim();
+    if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(cleanKey)) {
+      Alert.alert('Invalid Format', 'Recovery key must be in format: XXXX-XXXX-XXXX-XXXX');
       return;
     }
 
     setIsLoading(true);
-    // TODO: Implement actual authentication code verification logic here
-    // Navigate to reset password screen
-    setTimeout(() => {
+    try {
+      // Verify recovery key with backend
+      await authAPI.verifyRecoveryKey(email, cleanKey);
+      
+      // Navigate to reset password screen with email
+      router.push({
+        pathname: '/forgot-password-reset',
+        params: { email }
+      } as any);
+    } catch (error: any) {
+      console.error('Recovery key verification failed:', error);
+      Alert.alert('Invalid Recovery Key', error.message || 'The recovery key you entered is incorrect. Please try again.');
+    } finally {
       setIsLoading(false);
-      router.push('/forgot-password-reset' as any);
-    }, 1000);
+    }
   };
 
   return (
@@ -40,25 +55,32 @@ export default function ForgotPasswordScreen() {
         >
           <View style={styles.content}>
             {/* Title */}
-            <Text style={styles.title}>Forgot Password</Text>
+            <Text style={styles.title}>Enter Recovery Key</Text>
 
             {/* Description */}
             <Text style={styles.description}>
-              Please enter your email to receive a verification code
+              Please enter the recovery key you received during signup. It's in the format: XXXX-XXXX-XXXX-XXXX
             </Text>
+
+            {/* Email Display */}
+            <View style={styles.emailContainer}>
+              <Text style={styles.emailLabel}>Resetting password for:</Text>
+              <Text style={styles.emailText}>{email}</Text>
+            </View>
 
             {/* Input Field */}
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter Authentication Code"
+                  placeholder="XXXX-XXXX-XXXX-XXXX"
                   placeholderTextColor="#626262"
-                  value={authCode}
-                  onChangeText={setAuthCode}
+                  value={recoveryKey}
+                  onChangeText={setRecoveryKey}
                   keyboardType="default"
-                  autoCapitalize="none"
+                  autoCapitalize="characters"
                   autoCorrect={false}
+                  maxLength={19}  // 16 chars + 3 dashes
                 />
               </View>
             </View>
@@ -70,7 +92,7 @@ export default function ForgotPasswordScreen() {
               disabled={isLoading}
             >
               <Text style={styles.verifyButtonText}>
-                {isLoading ? 'Verifying...' : 'Verify Authentication Code'}
+                {isLoading ? 'Verifying...' : 'Verify Recovery Key'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -109,9 +131,28 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#000000',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
     lineHeight: 20,
     paddingHorizontal: 8,
+  },
+  emailContainer: {
+    backgroundColor: '#F3F4F6',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  emailLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  emailText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
   },
   inputContainer: {
     marginTop: 40,

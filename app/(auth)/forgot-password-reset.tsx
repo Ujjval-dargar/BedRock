@@ -1,39 +1,64 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { authAPI } from '../../utils/api';
 
 export default function ForgotPasswordResetScreen() {
+  const params = useLocalSearchParams();
+  const email = params.email as string;
+  
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignIn = async () => {
+  const handleResetPassword = async () => {
     if (!newPassword.trim() || !confirmPassword.trim()) {
-      alert('Please fill in all fields');
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      alert('Passwords do not match');
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
     if (newPassword.length < 8) {
-      alert('Password must be at least 8 characters');
+      Alert.alert('Error', 'Password must be at least 8 characters');
+      return;
+    }
+
+    if (!email) {
+      Alert.alert('Error', 'Email not found. Please start over.');
+      router.replace('/(auth)/login' as any);
       return;
     }
 
     setIsLoading(true);
-    // TODO: Implement actual password reset logic here
-    // Navigate to login screen or main app
-    setTimeout(() => {
+    
+    try {
+      // Call API to reset password
+      await authAPI.resetPassword(email, newPassword);
+      
+      // Show success message
+      Alert.alert(
+        '✅ Password Reset Successful',
+        'Your password has been reset successfully. You can now login with your new password.',
+        [
+          {
+            text: 'Go to Login',
+            onPress: () => router.replace('/(auth)/login' as any)
+          }
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to reset password. Please try again.');
+    } finally {
       setIsLoading(false);
-      router.replace('/login' as any);
-    }, 1000);
+    }
   };
 
   return (
@@ -105,14 +130,14 @@ export default function ForgotPasswordResetScreen() {
               </View>
             </View>
 
-            {/* Sign In Button */}
+            {/* Reset Password Button */}
             <TouchableOpacity
               style={[styles.signInButton, isLoading && styles.signInButtonDisabled]}
-              onPress={handleSignIn}
+              onPress={handleResetPassword}
               disabled={isLoading}
             >
               <Text style={styles.signInButtonText}>
-                {isLoading ? 'Processing...' : 'Sign In'}
+                {isLoading ? 'Resetting Password...' : 'Reset Password'}
               </Text>
             </TouchableOpacity>
           </View>

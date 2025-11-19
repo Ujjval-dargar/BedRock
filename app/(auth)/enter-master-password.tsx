@@ -195,8 +195,12 @@ export default function LoginMasterPasswordScreen() {
     }
   };
 
-  const handleForgetPassword = () => {
-    router.push('/forgot-password-verify' as any);
+  const handleForgetPassword = async () => {
+    const email = await AsyncStorage.getItem('temp_login_email');
+    router.push({
+      pathname: '/forgot-password-verify',
+      params: { email: email || '' }
+    } as any);
   };
 
   return (

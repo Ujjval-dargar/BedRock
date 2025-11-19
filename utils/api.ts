@@ -40,6 +40,8 @@ export interface User {
   id: number;
   username: string;
   email: string;
+  biometric_enabled?: boolean;
+  recovery_key?: string;  // Only present in signup response
 }
 
 export interface PasswordEntry {
@@ -330,6 +332,40 @@ export const authAPI = {
       console.error('Error verifying master password:', error);
       return { valid: false };
     }
+  },
+
+  async verifyRecoveryKey(email: string, recoveryKey: string): Promise<{ message: string; email: string }> {
+    const response = await fetch(`${API_BASE_URL}/verify-recovery-key`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, recovery_key: recoveryKey }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Invalid recovery key');
+    }
+
+    return response.json();
+  },
+
+  async resetPassword(email: string, newMasterPassword: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, new_master_password: newMasterPassword }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to reset password');
+    }
+
+    return response.json();
   },
 };
 

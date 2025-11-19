@@ -19,6 +19,18 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
+class SignupResponse(BaseModel):
+    """Response for signup - includes recovery key (shown only once)"""
+    id: int
+    username: str
+    email: EmailStr
+    biometric_enabled: bool = False
+    recovery_key: str  # Plain text recovery key - shown only once!
+
+    class Config:
+        from_attributes = True
+
+
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -88,3 +100,14 @@ class ShareOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class RecoveryKeyVerify(BaseModel):
+    email: EmailStr
+    recovery_key: str
+
+
+class PasswordReset(BaseModel):
+    email: EmailStr
+    new_master_password: str
+

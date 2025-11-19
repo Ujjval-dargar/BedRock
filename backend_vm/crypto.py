@@ -76,3 +76,24 @@ def b64encode(b: bytes) -> str:
 
 def b64decode(s: str) -> bytes:
     return base64.b64decode(s.encode())
+
+
+def generate_recovery_key() -> str:
+    """
+    Generate a human-readable recovery key in format: XXXX-XXXX-XXXX-XXXX
+    Using random alphanumeric characters (excluding ambiguous: 0, O, I, 1, l)
+    """
+    import secrets
+    import string
+    
+    # Use clear characters only (no 0, O, I, 1, l)
+    chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+    
+    # Generate 16 characters in 4 groups of 4
+    parts = []
+    for _ in range(4):
+        part = ''.join(secrets.choice(chars) for _ in range(4))
+        parts.append(part)
+    
+    return '-'.join(parts)
+

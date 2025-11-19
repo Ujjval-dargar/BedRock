@@ -8,33 +8,26 @@ import * as Clipboard from 'expo-clipboard';
 import { authAPI } from '../../utils/api';
 
 export default function AuthenticationKeyScreen() {
-  const [authKey, setAuthKey] = useState('');
+  const [recoveryKey, setRecoveryKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
 
-  // Generate a random authentication key on mount
+  // Don't generate key here - it comes from backend after signup
   useEffect(() => {
-    const generatedKey = generateAuthKey();
-    setAuthKey(generatedKey);
+    setRecoveryKey('Creating account...');
+    // Automatically complete signup when screen loads
+    completeSignup();
   }, []);
-
-  const generateAuthKey = () => {
-    // Simple key generation - replace with proper secure key generation
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let key = '';
-    for (let i = 0; i < 20; i++) {
-      key += chars.charAt(Math.floor(Math.random() * chars.length));
-      if ((i + 1) % 4 === 0 && i < 19) {
-        key += '-';
-      }
-    }
-    return key;
-  };
 
   const handleCopy = async () => {
     try {
+      if (!recoveryKey || recoveryKey === 'Creating account...') {
+        Alert.alert('Error', 'Recovery key not yet generated');
+        return;
+      }
+      
       // Copy to clipboard
-      await Clipboard.setStringAsync(authKey);
+      await Clipboard.setStringAsync(recoveryKey);
       
       // Mark that user has saved the key
       setKeySaved(true);
@@ -59,14 +52,14 @@ export default function AuthenticationKeyScreen() {
           { text: 'Not Yet', style: 'cancel' },
           { 
             text: 'Yes, I Saved It', 
-            onPress: () => completeSignup()
+            onPress: () => router.replace('/(auth)/login' as any)
           }
         ]
       );
       return;
     }
 
-    await completeSignup();
+    router.replace('/(auth)/login' as any);
   };
 
   const completeSignup = async () => {
@@ -82,11 +75,11 @@ export default function AuthenticationKeyScreen() {
         throw new Error('Signup data not found. Please start again.');
       }
 
-      // Call signup API to create the account
-      await authAPI.signup(username, email, masterPassword);
+      // Call signup API to create the account - returns recovery key!
+      const response = await authAPI.signup(username, email, masterPassword);
 
-      // Store recovery key for the user (TODO: implement backend storage)
-      console.log('🔑 Recovery key generated:', authKey);
+      // Set the recovery key from backend response
+      setRecoveryKey(response.recovery_key || '');
       
       // Clear all temporary signup data
       await AsyncStorage.multiRemove([
@@ -95,19 +88,16 @@ export default function AuthenticationKeyScreen() {
         'temp_signup_master_password'
       ]);
 
-      // Show success message and navigate to login
+      // Show success but keep user on this screen to save recovery key
       Alert.alert(
-        'Success!',
-        'Your account has been created successfully. Please login to continue.',
-        [
-          { 
-            text: 'OK', 
-            onPress: () => router.replace('/(auth)/login' as any)
-          }
-        ]
+        '✅ Account Created!',
+        'Your account has been created successfully. Please save your recovery key below before proceeding.',
+        [{ text: 'OK' }]
       );
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create account. Please try again.');
+      // On error, go back to allow retry
+      router.back();
     } finally {
       setIsLoading(false);
     }
@@ -142,10 +132,9 @@ export default function AuthenticationKeyScreen() {
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Authentication key"
+                  placeholder="Recovery key will appear here..."
                   placeholderTextColor="#626262"
-                  value={authKey}
-                  onChangeText={setAuthKey}
+                  value={recoveryKey}
                   editable={false}
                   multiline
                   numberOfLines={3}
@@ -155,6 +144,7 @@ export default function AuthenticationKeyScreen() {
                 <TouchableOpacity
                   style={styles.copyIcon}
                   onPress={handleCopy}
+                  disabled={!recoveryKey || recoveryKey === 'Creating account...'}
                 >
                   <Ionicons
                     name="copy-outline"
