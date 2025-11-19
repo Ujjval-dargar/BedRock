@@ -18,7 +18,7 @@ export default function TabLayout() {
         {/* Use the analytics screen for the Risks tab to match original BedRock */}
         <Tabs.Screen name="analytics" options={{ title: 'Risks' }} />
       </Tabs>
-      <CustomBottomNav onFABPress={() => router.push('/add-password')} />
+      <CustomBottomNav onFABPress={() => router.push('/(password-management)/add-password')} />
     </View>
   );
 }

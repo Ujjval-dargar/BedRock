@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { passwordAPI, storageAPI, sharingAPI, SharedPassword } from "../utils/api";
-import { aesDecrypt } from "../utils/crypto";
+import { passwordAPI, storageAPI, sharingAPI, SharedPassword } from "../../utils/api";
+import { aesDecrypt } from "../../utils/crypto";
 import * as Clipboard from 'expo-clipboard';
 
 const CATEGORY_COLORS: Record<string, { icon: string; color: string }> = {
@@ -226,8 +226,8 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
           {currentUserId && (currentUserId === item.owner_id || sharePermission === "edit") && (
             <View style={styles.buttonRow}>
               {currentUserId === item.owner_id && (
-                <TouchableOpacity style={styles.shareBtn} onPress={() => router.push(`/share-password?id=${item.id}`)}>
-                  <Ionicons name="share-social-outline" size={18} color="#6B5BFF" />
+                                <TouchableOpacity style={styles.shareBtn} onPress={() => router.push(`/(sharing)/share-password?id=${item.id}`)}>
+                  <Ionicons name="share-social" size={20} color="#6B72FF" />
                   <Text style={styles.shareBtnText}>Share</Text>
                 </TouchableOpacity>
               )}

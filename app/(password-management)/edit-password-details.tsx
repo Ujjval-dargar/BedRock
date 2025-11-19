@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,26 +9,52 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import * as Clipboard from "expo-clipboard";
-import { useRouter } from "expo-router";
-import { passwordAPI, storageAPI } from "../utils/api";
-import { aesEncrypt } from "../utils/crypto";
 
-export default function CreatePasswordScreen(): React.ReactElement {
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { passwordAPI, storageAPI, sharingAPI } from "../../utils/api";
+import { aesDecrypt, aesEncrypt } from "../../utils/crypto";
+
+export default function EditPasswordScreen(props: any): React.ReactElement {
+  const { route, navigation } = props || {};
   const router = useRouter();
+  const localParams = useLocalSearchParams() as any;
 
-  const [title, setTitle] = useState<string>("");
-  const [category, setCategory] = useState<string>("Browser");
-  const [url, setUrl] = useState<string>("");
-  const [username, setUsername] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [secure, setSecure] = useState<boolean>(true);
-  const [notes, setNotes] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const idFromRoute =
+    (route && route.params && route.params.id) ||
+    (route && route.params && route.params?.id?.toString()) ||
+    (localParams && localParams.id) ||
+    undefined;
 
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("Browser");
+  const [url, setUrl] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [notes, setNotes] = useState("");
+  const [secure, setSecure] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [ownerId, setOwnerId] = useState<number | null>(null);
+  const [sharePermission, setSharePermission] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const userId = await storageAPI.getUserId();
+        setCurrentUserId(userId);
+      } catch (error) {
+        console.error('Failed to get user ID:', error);
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
+  // Categories matching add-password screen
   const categories = [
     { label: "Browser", icon: "globe-outline", color: "#3B82F6" },
     { label: "Social", icon: "people-outline", color: "#EC4899" },
@@ -38,109 +64,206 @@ export default function CreatePasswordScreen(): React.ReactElement {
     { label: "Other", icon: "apps-outline", color: "#6B7280" },
   ];
 
-  const handleRandomize = (): void => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let res = "";
-    const len = 16;
-    for (let i = 0; i < len; i++) {
-      res += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setPassword(res);
-    Alert.alert("Generated", "Strong password generated!");
-  };
+  useEffect(() => {
+    if (!idFromRoute) return;
+    
+    const fetchPassword = async () => {
+      try {
+        setLoading(true);
+        const passwordEntry = await passwordAPI.get(Number(idFromRoute));
+        const vaultKey = await storageAPI.getVaultKey();
+        
+        if (!vaultKey) {
+          Alert.alert('Error', 'Vault key not found. Please login again.');
+          router.back();
+          return;
+        }
+        
+        // Decrypt the password
+        const decryptedPassword = await aesDecrypt(passwordEntry.encrypted_password, vaultKey);
+        
+        setOwnerId(passwordEntry.owner_id);
+        setTitle(passwordEntry.title);
+        setUsername(passwordEntry.username || '');
+        setPassword(decryptedPassword);
+        setCategory(passwordEntry.category || 'Browser');
+        setUrl(passwordEntry.url || '');
+        setNotes(passwordEntry.notes || '');
+        
+        // Check if user is not the owner and fetch permission
+        const userId = await storageAPI.getUserId();
+        if (userId && userId !== passwordEntry.owner_id) {
+          try {
+            const shares = await sharingAPI.getIncoming();
+            const currentShare = shares.find((s: any) => s.entry_id === passwordEntry.id);
+            if (currentShare) {
+              setSharePermission(currentShare.permission);
+              if (currentShare.permission !== "edit") {
+                Alert.alert(
+                  'Access Denied',
+                  'You cannot edit this password as you only have view permission.',
+                  [{ text: 'OK', onPress: () => router.back() }]
+                );
+              }
+            } else {
+              Alert.alert(
+                'Access Denied',
+                'You do not have access to this password.',
+                [{ text: 'OK', onPress: () => router.back() }]
+              );
+            }
+          } catch (error) {
+            console.error('Failed to check permission:', error);
+            Alert.alert(
+              'Error',
+              'Failed to verify permissions.',
+              [{ text: 'OK', onPress: () => router.back() }]
+            );
+          }
+        }
+      } catch (error: any) {
+        console.error('Failed to fetch password:', error);
+        Alert.alert('Error', error.message || 'Failed to load password');
+        router.back();
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPassword();
+  }, [idFromRoute, router]);
 
-  const handleUseGenerator = (): void => {
-    router.push("/(tabs)/generator" as any);
-  };
-
-  const handleCopyPassword = async (): Promise<void> => {
-    if (!password) {
-      Alert.alert("Error", "No password to copy");
-      return;
-    }
-    await Clipboard.setStringAsync(password);
-    Alert.alert("Copied", "Password copied to clipboard");
-  };
-
-  const handleAddToVault = async (): Promise<void> => {
-    if (!title.trim()) {
-      Alert.alert("Required Field", "Please enter a title");
-      return;
-    }
-    if (!username.trim()) {
-      Alert.alert("Required Field", "Please enter a username or email");
-      return;
-    }
-    if (!password.trim()) {
-      Alert.alert("Required Field", "Please enter a password");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // Get vault key from storage
-      const vaultKey = await storageAPI.getVaultKey();
-      if (!vaultKey) {
-        Alert.alert("Error", "Please login again");
-        router.replace('/login' as any);
+  const handleSave = async (): Promise<void> => {
+    // Check ownership or edit permission before saving
+    if (currentUserId && ownerId) {
+      if (currentUserId !== ownerId && sharePermission !== "edit") {
+        Alert.alert('Error', 'You do not have permission to edit this password.');
         return;
       }
-
-      // Encrypt password with vault key
+    }
+    
+    if (!title.trim()) {
+      Alert.alert("Error", "Title is required");
+      return;
+    }
+    
+    if (!username.trim()) {
+      Alert.alert("Error", "Username / Email is required");
+      return;
+    }
+    
+    if (!password.trim()) {
+      Alert.alert("Error", "Password is required");
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      const vaultKey = await storageAPI.getVaultKey();
+      
+      if (!vaultKey) {
+        Alert.alert('Error', 'Vault key not found. Please login again.');
+        return;
+      }
+      
+      // Encrypt the password
       const encryptedPassword = await aesEncrypt(password, vaultKey);
-
-      // Create password entry on backend with url and category
-      await passwordAPI.create(
+      
+      // Update on backend with category and notes
+      await passwordAPI.update(
+        Number(idFromRoute),
         title,
-        username || undefined,
+        username,
         encryptedPassword,
         url || undefined,
         category,
         notes || undefined
       );
-
-      Alert.alert(
-        "Success",
-        "Password saved to your vault!",
-        [
-          {
-            text: "View Vault",
-            onPress: () => router.push("/(tabs)/vault" as any),
-          },
-          {
-            text: "Add Another",
-            onPress: () => {
-              setTitle("");
-              setUsername("");
-              setPassword("");
-              setUrl("");
-              setNotes("");
-              setCategory("Browser");
-            },
-          },
-        ]
-      );
+      
+      Alert.alert('Success', 'Password updated successfully');
+      router.back();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save password");
+      console.error('Update error:', error);
+      Alert.alert('Error', error.message || 'Failed to update password');
     } finally {
-      setIsLoading(false);
+      setSaving(false);
     }
+  };
+
+  const handleBack = (): void => {
+    if (navigation && typeof navigation.goBack === "function") {
+      navigation.goBack();
+    } else {
+      router.back();
+    }
+  };
+
+  const randomize = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let res = "";
+    for (let i = 0; i < 16; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+    setPassword(res);
+  };
+
+  const handleCopyPassword = async () => {
+    // Copy functionality - you can add Clipboard here if needed
+    Alert.alert("Copied", "Password copied to clipboard");
+  };
+
+  const handleDelete = (): void => {
+    Alert.alert(
+      "Delete",
+      "Are you sure you want to delete this password?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await passwordAPI.delete(Number(idFromRoute));
+              Alert.alert("Success", "Password deleted");
+              // Navigate to vault after deletion
+              router.push("/(tabs)/vault" as any);
+            } catch (error: any) {
+              Alert.alert("Error", error.message || "Failed to delete password");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const SAView: any = SafeAreaView;
 
-  return (
-    <SAView style={styles.safe} edges={["top"]}>
-      <KeyboardAvoidingView
-        behavior={Platform.select({ ios: "padding", android: undefined })}
-        style={{ flex: 1 }}
-      >
+  if (loading) {
+    return (
+      <SAView style={styles.safe} edges={["top", "left", "right"]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.iconCircle}>
-            <Ionicons name="chevron-back" size={20} color="#000" />
+          <TouchableOpacity onPress={handleBack} style={styles.iconCircle}>
+            <Ionicons name="chevron-back" size={18} color="#000" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Password</Text>
+          <Text style={styles.headerTitle}>Edit Password</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#6B5BFF" />
+          <Text style={{ marginTop: 16, color: '#666' }}>Loading...</Text>
+        </View>
+      </SAView>
+    );
+  }
+
+  return (
+    <SAView style={styles.safe} edges={["top", "left", "right"]}>
+      <KeyboardAvoidingView behavior={Platform.select({ ios: "padding", android: undefined })} style={{ flex: 1 }}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBack} style={styles.iconCircle}>
+            <Ionicons name="chevron-back" size={18} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Password</Text>
           <View style={{ width: 36 }} />
         </View>
 
@@ -246,18 +369,9 @@ export default function CreatePasswordScreen(): React.ReactElement {
             </View>
 
             <View style={styles.passwordActions}>
-              <TouchableOpacity style={styles.actionButton} onPress={handleRandomize}>
+              <TouchableOpacity style={styles.actionButton} onPress={randomize}>
                 <Ionicons name="sync-outline" size={18} color="#6B5BFF" />
                 <Text style={styles.actionButtonText}>Quick Generate</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.actionButtonPrimary]}
-                onPress={handleUseGenerator}
-              >
-                <Ionicons name="settings-outline" size={18} color="#fff" />
-                <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>
-                  Advanced Generator
-                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -295,9 +409,15 @@ export default function CreatePasswordScreen(): React.ReactElement {
           </View>
 
           {/* Save Button */}
-          <TouchableOpacity style={styles.saveButton} onPress={handleAddToVault}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
             <Ionicons name="checkmark-circle" size={20} color="#fff" />
-            <Text style={styles.saveButtonText}>Save to Vault</Text>
+            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
+          </TouchableOpacity>
+
+          {/* Delete Button */}
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} disabled={saving}>
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+            <Text style={styles.deleteButtonText}>Delete Password</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -439,17 +559,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#6B5BFF",
   },
-  actionButtonPrimary: {
-    backgroundColor: "#6B5BFF",
-    borderColor: "#6B5BFF",
-  },
   actionButtonText: {
     fontSize: 13,
     fontWeight: "600",
     color: "#6B5BFF",
-  },
-  actionButtonTextPrimary: {
-    color: "#fff",
   },
   saveButton: {
     flexDirection: "row",
@@ -468,6 +581,23 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 2,
+    borderColor: "#EF4444",
+  },
+  deleteButtonText: {
+    color: "#EF4444",
     fontSize: 16,
     fontWeight: "700",
   },

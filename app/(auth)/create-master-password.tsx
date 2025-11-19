@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI } from '../utils/api';
+import { authAPI } from '../../utils/api';
 
 export default function MasterPasswordScreen() {
   const [username, setUsername] = useState('');
@@ -47,7 +47,7 @@ export default function MasterPasswordScreen() {
       
       // Show success and navigate to login
       Alert.alert('Success', 'Account created successfully! Please login.', [
-        { text: 'OK', onPress: () => router.replace('/login' as any) }
+        { text: 'OK', onPress: () => router.replace('/(auth)/login' as any) }
       ]);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create account');

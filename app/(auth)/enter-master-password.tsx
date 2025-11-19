@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI, storageAPI } from '../utils/api';
-import { decryptVaultKey } from '../utils/crypto';
+import { authAPI, storageAPI } from '../../utils/api';
+import { decryptVaultKey } from '../../utils/crypto';
 
 export default function LoginMasterPasswordScreen() {
   const [masterPassword, setMasterPassword] = useState('');

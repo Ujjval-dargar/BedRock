@@ -4,11 +4,11 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function SignupScreen() {
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignup = async () => {
+  const handleLogin = async () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email');
       return;
@@ -24,12 +24,11 @@ export default function SignupScreen() {
     setIsLoading(true);
     
     try {
-      // Store email temporarily for later signup steps
-      await AsyncStorage.setItem('temp_signup_email', email);
-      // Navigate to username screen (you can add this or go directly to master password)
-      router.push('/create-master-password' as any);
+      // Store email temporarily for use in master password screen
+      await AsyncStorage.setItem('temp_login_email', email);
+      router.push('/(auth)/enter-master-password' as any);
     } catch (error) {
-      Alert.alert('Error', 'Failed to proceed with signup');
+      Alert.alert('Error', 'Failed to proceed with login');
     } finally {
       setIsLoading(false);
     }
@@ -47,13 +46,12 @@ export default function SignupScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
-
             {/* Title */}
-            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.title}>Login here</Text>
 
             {/* Description */}
             <Text style={styles.description}>
-              Create an account to save your passwords and sync to the account
+              Welcome back !!
             </Text>
 
             {/* Input Field */}
@@ -72,34 +70,33 @@ export default function SignupScreen() {
               </View>
             </View>
 
-            {/* Sign up Button */}
+            {/* Sign in Button */}
             <TouchableOpacity
-              style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
-              onPress={handleSignup}
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+              onPress={handleLogin}
               disabled={isLoading}
             >
-              <Text style={styles.signupButtonText}>
-                {isLoading ? 'Sending...' : 'Sign up'}
+              <Text style={styles.loginButtonText}>
+                {isLoading ? 'Logging in...' : 'Sign in'}
               </Text>
             </TouchableOpacity>
 
-            {/* Login Link */}
+            {/* Register Link */}
             <View style={styles.linkContainer}>
-              <Text style={styles.linkText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/login' as any)}>
-                <Text style={styles.link}>Login</Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/signup' as any)}>
+                <Text style={styles.linkText}>Create new account</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Mobile Number Signup Link */}
+            {/* Mobile Number Login Link */}
             <TouchableOpacity 
               style={styles.mobileLink}
               onPress={() => {
-                // TODO: Navigate to mobile number signup
-                alert('Mobile number signup coming soon');
+                // TODO: Navigate to mobile number login
+                alert('Mobile number login coming soon');
               }}
             >
-              <Text style={styles.mobileLinkText}>Or Sign up with Mobile Number</Text>
+              <Text style={styles.mobileLinkText}>Or Sign In with Mobile Number</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -125,25 +122,16 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 40,
   },
-  header: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 32,
-    fontWeight: '400',
-    textAlign: 'left',
-    alignSelf: 'flex-start',
-  },
   title: {
     fontSize: 30,
     fontWeight: '900',
     color: '#6B72FF',
     marginBottom: 16,
     textAlign: 'center',
-    
   },
   description: {
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#000000',
     textAlign: 'center',
     marginBottom: 32,
@@ -171,7 +159,7 @@ const styles = StyleSheet.create({
     color: '#11181C',
     paddingVertical: 0,
   },
-  signupButton: {
+  loginButton: {
     backgroundColor: '#6B72FF',
     paddingVertical: 16,
     paddingHorizontal: 16,
@@ -191,14 +179,13 @@ const styles = StyleSheet.create({
     height: 58,
     minHeight: 56,
   },
-  signupButtonDisabled: {
+  loginButtonDisabled: {
     opacity: 0.6,
   },
-  signupButtonText: {
+  loginButtonText: {
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '600',
-    
   },
   linkContainer: {
     flexDirection: 'row',
@@ -210,17 +197,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000000',
     fontWeight: '500',
-    
-  },
-  link: {
-    fontSize: 14,
-    color: '#6366F1',
-    fontWeight: '600',
   },
   mobileLink: {
     alignItems: 'center',
     marginTop: 0,
-    
   },
   mobileLinkText: {
     fontSize: 16,

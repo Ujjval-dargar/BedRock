@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { sharingAPI, passwordAPI } from "../utils/api";
+import { sharingAPI, passwordAPI } from "../../utils/api";
 import * as Crypto from "expo-crypto";
 
 type Permission = "view" | "edit";

@@ -125,7 +125,7 @@ export function RecentlyAdded() {
   const handleEdit = () => {
     if (selectedItemIndex !== null) {
       const id = items[selectedItemIndex].id;
-      router.push(`/edit-password-details?id=${encodeURIComponent(id)}` as any);
+      router.push(`/(password-management)/edit-password-details?id=${encodeURIComponent(id)}` as any);
     }
   };
 
@@ -207,7 +207,7 @@ export function RecentlyAdded() {
             <Pressable
               key={item.id}
               style={[styles.item, { backgroundColor: item.backgroundColor }]}
-              onPress={() => router.push(`/view-password-details?id=${encodeURIComponent(item.id)}`)}
+              onPress={() => router.push(`/(password-management)/view-password-details?id=${encodeURIComponent(item.id)}`)}
             >
               <View style={styles.iconWrapper}>
                 <View style={[styles.iconContainer, { backgroundColor: item.iconColor }]}>

@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import { sharingAPI, passwordAPI } from "../utils/api";
+import { sharingAPI, passwordAPI } from "../../utils/api";
 import { useFocusEffect } from "@react-navigation/native";
 
 const Tab = createMaterialTopTabNavigator();
@@ -52,13 +52,11 @@ const CATEGORY_COLORS: Record<string, { bg: string; icon: string }> = {
 const SharedPasswordCard = ({ item, type }: { item: SharedPassword; type: "received" | "sent" }) => {
   const router = useRouter();
 
-  const handlePress = () => {
-    if (type === "sent") {
-      // For passwords shared by me, go to manage-sharing
-      router.push(`/manage-sharing?id=${item.entry_id}&shareId=${item.id}&type=${type}` as any);
+    const handleCardPress = (item: SharedPassword, type: "incoming" | "outgoing") => {
+    if (type === "outgoing") {
+      router.push(`/(sharing)/manage-sharing?id=${item.entry_id}&shareId=${item.id}&type=${type}` as any);
     } else {
-      // For passwords shared with me, view the password
-      router.push(`/view-password-details?id=${item.entry_id}` as any);
+      router.push(`/(password-management)/view-password-details?id=${item.entry_id}` as any);
     }
   };
 

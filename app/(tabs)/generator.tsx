@@ -62,7 +62,9 @@ export default function GeneratorScreen(): React.ReactElement {
       return;
     }
     // Navigate to add-password screen with the generated password
-    router.push('/add-password' as any);
+    const handleAdd = () => {
+    router.push('/(password-management)/add-password' as any);
+  };
   };
 
   // Generate initial password on mount

@@ -199,11 +199,11 @@ export default function VaultScreen() {
   const strongPasswords = totalPasswords - weakPasswords;
 
   const handlePasswordPress = (id: number) => {
-    router.push(`/view-password-details?id=${id}` as any);
+    router.push(`/(password-management)/view-password-details?id=${id}` as any);
   };
 
   const handleAddPassword = () => {
-    router.push('/add-password' as any);
+    router.push('/(password-management)/add-password' as any);
   };
 
   const SAView: any = SafeAreaView;
