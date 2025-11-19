@@ -121,7 +121,7 @@ export const authAPI = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.toLowerCase() }),
       });
 
       if (response.ok) {
@@ -171,7 +171,7 @@ export const authAPI = {
   async signup(username: string, email: string, masterPassword: string): Promise<User> {
     const user = await fetchAPI('/signup', {
       method: 'POST',
-      body: JSON.stringify({ username, email, master_password: masterPassword }),
+      body: JSON.stringify({ username, email: email.toLowerCase(), master_password: masterPassword }),
     });
     return user;
   },
@@ -182,14 +182,15 @@ export const authAPI = {
     vault_salt: string;
     public_key_pem: string;
   }> {
+    const normalizedEmail = email.toLowerCase();
     const response = await fetchAPI('/login', {
       method: 'POST',
-      body: JSON.stringify({ email, master_password: masterPassword }),
+      body: JSON.stringify({ email: normalizedEmail, master_password: masterPassword }),
     });
 
     // Store auth token
     await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, response.access_token);
-    await AsyncStorage.setItem(STORAGE_KEYS.EMAIL, email);
+    await AsyncStorage.setItem(STORAGE_KEYS.EMAIL, normalizedEmail);
     await AsyncStorage.setItem(STORAGE_KEYS.ENCRYPTED_VAULT_KEY, response.encrypted_vault_key);
     await AsyncStorage.setItem(STORAGE_KEYS.VAULT_SALT, response.vault_salt);
     await AsyncStorage.setItem(STORAGE_KEYS.PUBLIC_KEY, response.public_key_pem);
@@ -212,14 +213,15 @@ export const authAPI = {
     public_key_pem: string;
     master_password_hash: string;
   }> {
+    const normalizedEmail = email.toLowerCase();
     const response = await fetchAPI('/biometric/login', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: normalizedEmail }),
     });
 
     // Store auth token and user data (same as regular login)
     await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, response.access_token);
-    await AsyncStorage.setItem(STORAGE_KEYS.EMAIL, email);
+    await AsyncStorage.setItem(STORAGE_KEYS.EMAIL, normalizedEmail);
     await AsyncStorage.setItem(STORAGE_KEYS.ENCRYPTED_VAULT_KEY, response.encrypted_vault_key);
     await AsyncStorage.setItem(STORAGE_KEYS.VAULT_SALT, response.vault_salt);
     await AsyncStorage.setItem(STORAGE_KEYS.PUBLIC_KEY, response.public_key_pem);
@@ -266,21 +268,21 @@ export const authAPI = {
   async sendVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
     return await fetchAPI('/send-verification-code', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: email.toLowerCase() }),
     });
   },
 
   async verifyEmailCode(email: string, code: string): Promise<{ success: boolean; verified: boolean }> {
     return await fetchAPI('/verify-email-code', {
       method: 'POST',
-      body: JSON.stringify({ email, code }),
+      body: JSON.stringify({ email: email.toLowerCase(), code }),
     });
   },
 
   async resendVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
     return await fetchAPI('/resend-verification-code', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: email.toLowerCase() }),
     });
   },
 
@@ -305,14 +307,14 @@ export const authAPI = {
   async checkBiometricStatus(email: string): Promise<{ biometric_enabled: boolean; user_exists: boolean }> {
     return await fetchAPI('/biometric/check', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: email.toLowerCase() }),
     });
   },
 
   async getBiometricMasterPassword(email: string): Promise<{ master_password: string; email: string }> {
     return await fetchAPI('/biometric/master-password', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: email.toLowerCase() }),
     });
   },
 
@@ -324,7 +326,7 @@ export const authAPI = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, master_password: masterPassword }),
+        body: JSON.stringify({ email: email.toLowerCase(), master_password: masterPassword }),
       });
 
       return { valid: response.ok };
@@ -340,7 +342,7 @@ export const authAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, recovery_key: recoveryKey }),
+      body: JSON.stringify({ email: email.toLowerCase(), recovery_key: recoveryKey }),
     });
 
     if (!response.ok) {
@@ -357,7 +359,7 @@ export const authAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, new_master_password: newMasterPassword }),
+      body: JSON.stringify({ email: email.toLowerCase(), new_master_password: newMasterPassword }),
     });
 
     if (!response.ok) {
