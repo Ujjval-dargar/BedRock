@@ -211,31 +211,6 @@ export default function EditPasswordScreen(props: any): React.ReactElement {
     Alert.alert("Copied", "Password copied to clipboard");
   };
 
-  const handleDelete = (): void => {
-    Alert.alert(
-      "Delete",
-      "Are you sure you want to delete this password?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await passwordAPI.delete(Number(idFromRoute));
-              Alert.alert("Success", "Password deleted");
-              // Navigate to vault after deletion
-              router.push("/(tabs)/vault" as any);
-            } catch (error: any) {
-              Alert.alert("Error", error.message || "Failed to delete password");
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  };
-
   const SAView: any = SafeAreaView;
 
   if (loading) {
@@ -414,12 +389,6 @@ export default function EditPasswordScreen(props: any): React.ReactElement {
             <Ionicons name="checkmark-circle" size={20} color="#fff" />
             <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
           </TouchableOpacity>
-
-          {/* Delete Button */}
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} disabled={saving}>
-            <Ionicons name="trash-outline" size={20} color="#EF4444" />
-            <Text style={styles.deleteButtonText}>Delete Password</Text>
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SAView>
@@ -582,23 +551,6 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#FEE2E2",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 12,
-    borderWidth: 2,
-    borderColor: "#EF4444",
-  },
-  deleteButtonText: {
-    color: "#EF4444",
     fontSize: 16,
     fontWeight: "700",
   },

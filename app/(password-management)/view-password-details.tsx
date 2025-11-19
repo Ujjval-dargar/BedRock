@@ -42,6 +42,7 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [sharePermission, setSharePermission] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -132,6 +133,31 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
     Alert.alert('Copied', `${label} copied to clipboard`);
   };
 
+  const handleDelete = (): void => {
+    Alert.alert(
+      "Delete Password",
+      "Are you sure you want to delete this password?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (!item) return;
+              await passwordAPI.delete(item.id);
+              Alert.alert("Success", "Password deleted");
+              router.push("/(tabs)/vault" as any);
+            } catch (error: any) {
+              Alert.alert("Error", error.message || "Failed to delete password");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const SAView: any = SafeAreaView;
 
   if (loading) {
@@ -195,14 +221,22 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
           <View style={styles.fieldRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Password</Text>
-              <Text style={styles.value}>••••••••</Text>
+              <Text style={styles.value}>{showPassword ? item.password : '••••••••'}</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.copyButton} 
-              onPress={() => handleCopy(item.password, 'Password')}
-            >
-              <Ionicons name="copy-outline" size={20} color="#6B5BFF" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity 
+                style={styles.copyButton} 
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#6B5BFF" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.copyButton} 
+                onPress={() => handleCopy(item.password, 'Password')}
+              >
+                <Ionicons name="copy-outline" size={20} color="#6B5BFF" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {item.url && (
@@ -235,6 +269,14 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
                 <Text style={styles.editText}>Edit</Text>
               </TouchableOpacity>
             </View>
+          )}
+
+          {/* Delete Button - only for owner */}
+          {currentUserId && currentUserId === item.owner_id && (
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+              <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              <Text style={styles.deleteButtonText}>Delete Password</Text>
+            </TouchableOpacity>
           )}
 
           {currentUserId && currentUserId !== item.owner_id && sharePermission === "view" && (
@@ -388,5 +430,22 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: "#6B5BFF",
+  },
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 2,
+    borderColor: "#EF4444",
+  },
+  deleteButtonText: {
+    color: "#EF4444",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
