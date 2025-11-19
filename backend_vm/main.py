@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
-import database, models, schemas, crud, crypto, auth
+import database, models, schemas, crud, crypto, auth, email_service
 from database import get_session
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -45,11 +45,77 @@ class SignupIn(BaseModel):
     master_password: str
 
 
+class EmailCheckIn(BaseModel):
+    email: str
+
+
+class VerificationCodeIn(BaseModel):
+    email: str
+    code: str
+
+
+@app.post("/check-email")
+async def check_email(data: EmailCheckIn, db: AsyncSession = Depends(get_session)):
+    """Check if an email is already registered."""
+    existing = await crud.get_user_by_email(db, data.email)
+    return {"exists": existing is not None, "available": existing is None}
+
+
+@app.post("/send-verification-code")
+async def send_verification_code(data: EmailCheckIn):
+    """Send verification code to email."""
+    try:
+        code = await email_service.send_verification_code(data.email)
+        return {
+            "success": True,
+            "message": "Verification code sent to email",
+            "email": data.email
+        }
+    except Exception as e:
+        print(f"Error sending verification code: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send verification code")
+
+
+@app.post("/verify-email-code")
+async def verify_email_code(data: VerificationCodeIn):
+    """Verify email with code."""
+    is_valid = email_service.verify_code(data.email, data.code)
+    
+    if is_valid:
+        return {
+            "success": True,
+            "message": "Email verified successfully",
+            "verified": True
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+
+
+@app.post("/resend-verification-code")
+async def resend_verification_code(data: EmailCheckIn):
+    """Resend verification code to email."""
+    try:
+        code = await email_service.resend_verification_code(data.email)
+        return {
+            "success": True,
+            "message": "Verification code resent to email",
+            "email": data.email
+        }
+    except Exception as e:
+        print(f"Error resending verification code: {e}")
+        raise HTTPException(status_code=500, detail="Failed to resend verification code")
+
+
 @app.post("/signup", response_model=schemas.UserOut)
 async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
     existing = await crud.get_user_by_email(db, data.email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Check if username already exists
+    existing_username = await crud.get_user_by_username(db, data.username)
+    if existing_username:
+        raise HTTPException(status_code=400, detail="Username already taken")
 
     # hash master password for authentication
     hashed = auth.hash_password(data.master_password)

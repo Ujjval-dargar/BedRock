@@ -39,18 +39,14 @@ export default function MasterPasswordScreen() {
         throw new Error('Email not found');
       }
 
-      // Call signup API
-      await authAPI.signup(username, email, masterPassword);
+      // Store signup data temporarily for later steps
+      await AsyncStorage.setItem('temp_signup_username', username);
+      await AsyncStorage.setItem('temp_signup_master_password', masterPassword);
       
-      // Clear temporary email
-      await AsyncStorage.removeItem('temp_signup_email');
-      
-      // Show success and navigate to login
-      Alert.alert('Success', 'Account created successfully! Please login.', [
-        { text: 'OK', onPress: () => router.replace('/(auth)/login' as any) }
-      ]);
+      // Navigate to email verification
+      router.push('/(security)/email-verification' as any);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create account');
+      Alert.alert('Error', error.message || 'Failed to proceed');
     } finally {
       setIsLoading(false);
     }

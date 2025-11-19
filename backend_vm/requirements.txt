@@ -9,3 +9,5 @@ pyjwt
 cryptography
 pydantic
 alembic
+aiosmtplib
+email-validator

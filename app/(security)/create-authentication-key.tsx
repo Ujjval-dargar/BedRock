@@ -3,14 +3,17 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Clipboard from 'expo-clipboard';
+import { authAPI } from '../../utils/api';
 
 export default function AuthenticationKeyScreen() {
   const [authKey, setAuthKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [keySaved, setKeySaved] = useState(false);
 
   // Generate a random authentication key on mount
   useEffect(() => {
-    // TODO: Replace with actual key generation from backend
     const generatedKey = generateAuthKey();
     setAuthKey(generatedKey);
   }, []);
@@ -30,36 +33,84 @@ export default function AuthenticationKeyScreen() {
 
   const handleCopy = async () => {
     try {
-      if (Platform.OS === 'web') {
-        await navigator.clipboard.writeText(authKey);
-        Alert.alert('Success', 'Authentication key copied to clipboard');
-      } else {
-        // For native, we'll show the key for manual copy or install expo-clipboard
-        // For now, just show an alert with instructions
-        Alert.alert(
-          'Copy Key',
-          `Please copy this key manually: ${authKey}`,
-          [{ text: 'OK' }]
-        );
-      }
+      // Copy to clipboard
+      await Clipboard.setStringAsync(authKey);
+      
+      // Mark that user has saved the key
+      setKeySaved(true);
+      
+      // Show success message
+      Alert.alert(
+        'Recovery Key Copied!',
+        'Your recovery key has been copied to clipboard.\n\nPlease save it in a secure location. You will need it to recover your account if you forget your master password.',
+        [{ text: 'OK' }]
+      );
     } catch (error) {
-      Alert.alert('Error', 'Failed to copy key');
+      Alert.alert('Error', 'Failed to copy recovery key to clipboard');
     }
   };
 
   const handleProceed = async () => {
-    if (!authKey.trim()) {
-      alert('Authentication key is required');
+    if (!keySaved) {
+      Alert.alert(
+        'Warning',
+        'Have you saved your recovery key? You will need it to recover your account if you forget your master password.',
+        [
+          { text: 'Not Yet', style: 'cancel' },
+          { 
+            text: 'Yes, I Saved It', 
+            onPress: () => completeSignup()
+          }
+        ]
+      );
       return;
     }
 
+    await completeSignup();
+  };
+
+  const completeSignup = async () => {
     setIsLoading(true);
-    // TODO: Implement actual authentication key storage logic here
-    // For now, navigate to main app home screen
-    setTimeout(() => {
+    
+    try {
+      // Get stored signup data
+      const email = await AsyncStorage.getItem('temp_signup_email');
+      const username = await AsyncStorage.getItem('temp_signup_username');
+      const masterPassword = await AsyncStorage.getItem('temp_signup_master_password');
+
+      if (!email || !username || !masterPassword) {
+        throw new Error('Signup data not found. Please start again.');
+      }
+
+      // Call signup API to create the account
+      await authAPI.signup(username, email, masterPassword);
+
+      // Store recovery key for the user (TODO: implement backend storage)
+      console.log('🔑 Recovery key generated:', authKey);
+      
+      // Clear all temporary signup data
+      await AsyncStorage.multiRemove([
+        'temp_signup_email',
+        'temp_signup_username',
+        'temp_signup_master_password'
+      ]);
+
+      // Show success message and navigate to login
+      Alert.alert(
+        'Success!',
+        'Your account has been created successfully. Please login to continue.',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => router.replace('/(auth)/login' as any)
+          }
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create account. Please try again.');
+    } finally {
       setIsLoading(false);
-      router.replace('/(tabs)/home' as any);
-    }, 1000);
+    }
   };
 
   return (
@@ -121,7 +172,7 @@ export default function AuthenticationKeyScreen() {
               disabled={isLoading}
             >
               <Text style={styles.proceedButtonText}>
-                {isLoading ? 'Processing...' : 'Proceed'}
+                {isLoading ? 'Creating Account...' : 'I Have Saved My Recovery Key'}
               </Text>
             </TouchableOpacity>
           </View>

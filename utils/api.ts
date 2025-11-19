@@ -113,57 +113,29 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 // Auth APIs
 export const authAPI = {
   async checkEmail(email: string): Promise<{ exists: boolean }> {
-    const token = await getAuthToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const url = `${API_BASE_URL}/signup`;
-    
     try {
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE_URL}/check-email`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify({ 
-          username: '__CHECK__', 
-          email, 
-          master_password: '__CHECK__' 
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
       });
 
-      // If 400 error, check if it's about duplicate email
-      if (response.status === 400) {
-        const error = await response.json().catch(() => ({ detail: '' }));
-        console.log('📧 Email check: Email already registered');
-        if (error.detail && 
-            (error.detail.toLowerCase().includes('email already registered') || 
-             error.detail.toLowerCase().includes('already exists'))) {
-          return { exists: true };
-        }
-      }
-
-      // If 200, email doesn't exist
       if (response.ok) {
-        console.log('📧 Email check: Email available');
-        return { exists: false };
+        const data = await response.json();
+        console.log('📧 Email check:', data.exists ? 'Already registered' : 'Available');
+        return { exists: data.exists };
       }
 
-      // For other status codes, throw error
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(error.detail || `HTTP ${response.status}`);
+      // If endpoint fails, fall back to allowing signup (don't block users)
+      console.log('⚠ Email check endpoint error, allowing signup');
+      return { exists: false };
+      
     } catch (error: any) {
-      // If it's our known error types, handle them
-      if (error.message && 
-          (error.message.toLowerCase().includes('email already registered') || 
-           error.message.toLowerCase().includes('already exists'))) {
-        return { exists: true };
-      }
-      // For network errors or other issues, throw them
-      console.error('❌ Email check failed:', error.message);
-      throw error;
+      // Network errors - assume email is available to not block signup
+      console.log('⚠ Network error during email check, allowing signup');
+      return { exists: false };
     }
   },
 
@@ -219,6 +191,27 @@ export const authAPI = {
       STORAGE_KEYS.ENCRYPTED_PRIVATE_KEY,
       STORAGE_KEYS.EMAIL,
     ]);
+  },
+
+  async sendVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
+    return await fetchAPI('/send-verification-code', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async verifyEmailCode(email: string, code: string): Promise<{ success: boolean; verified: boolean }> {
+    return await fetchAPI('/verify-email-code', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    });
+  },
+
+  async resendVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
+    return await fetchAPI('/resend-verification-code', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
   },
 };
 

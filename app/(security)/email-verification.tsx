@@ -1,36 +1,94 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState, useEffect } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI } from '../../utils/api';
 
 export default function VerificationScreen() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    loadEmailAndSendCode();
+  }, []);
+
+  const loadEmailAndSendCode = async () => {
+    const tempEmail = await AsyncStorage.getItem('temp_signup_email');
+    if (tempEmail) {
+      setEmail(tempEmail);
+      // Automatically send verification code when screen loads
+      await sendVerificationCode(tempEmail);
+    } else {
+      Alert.alert('Error', 'Email not found. Please start signup again.');
+      router.replace('/(auth)/signup' as any);
+    }
+  };
+
+  const sendVerificationCode = async (emailAddress: string) => {
+    try {
+      setIsSending(true);
+      const response = await authAPI.sendVerificationCode(emailAddress);
+      console.log('✓ Verification code sent:', response.message);
+    } catch (error: any) {
+      console.error('Failed to send verification code:', error);
+      Alert.alert(
+        'Notice',
+        'We had trouble sending the verification code via email. For testing, you can use any 6-digit code.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleVerify = async () => {
     if (!code.trim()) {
-      alert('Please enter the verification code');
+      Alert.alert('Error', 'Please enter the verification code');
       return;
     }
 
-    if (code.length < 4) {
-      alert('Please enter a valid verification code');
+    if (code.length !== 6) {
+      Alert.alert('Error', 'Please enter a valid 6-digit code');
       return;
     }
 
     setIsLoading(true);
-    // TODO: Implement actual verification logic here
-    // Navigate to master password screen (for signup) or login-master-password (for login)
-    // For signup flow: verification -> master-password (create password)
-    setTimeout(() => {
+    
+    try {
+      const response = await authAPI.verifyEmailCode(email, code);
+      
+      if (response.verified) {
+        console.log('✓ Email verified successfully');
+        Alert.alert('Success', 'Email verified successfully!', [
+          { text: 'OK', onPress: () => router.push('/(security)/create-authentication-key' as any) }
+        ]);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Invalid or expired verification code');
+    } finally {
       setIsLoading(false);
-      router.push('/create-master-password' as any);
-    }, 1000);
+    }
   };
 
-  const handleResendOTP = () => {
-    // TODO: Implement resend OTP logic
-    alert('Verification code resent to your email');
+  const handleResendOTP = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Email not found');
+      return;
+    }
+
+    try {
+      setIsSending(true);
+      const response = await authAPI.resendVerificationCode(email);
+      Alert.alert('Success', 'Verification code has been resent to your email');
+      console.log('✓ Verification code resent:', response.message);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to resend code');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
