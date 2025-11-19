@@ -57,7 +57,7 @@ class VerificationCodeIn(BaseModel):
 @app.post("/check-email")
 async def check_email(data: EmailCheckIn, db: AsyncSession = Depends(get_session)):
     """Check if an email is already registered."""
-    existing = await crud.get_user_by_email(db, data.email)
+    existing = await crud.get_user_by_email(db, data.email.lower())
     return {"exists": existing is not None, "available": existing is None}
 
 
@@ -72,11 +72,11 @@ async def check_username(data: schemas.UsernameCheckIn, db: AsyncSession = Depen
 async def send_verification_code(data: EmailCheckIn):
     """Send verification code to email."""
     try:
-        code = await email_service.send_verification_code(data.email)
+        code = await email_service.send_verification_code(data.email.lower())
         return {
             "success": True,
             "message": "Verification code sent to email",
-            "email": data.email
+            "email": data.email.lower()
         }
     except Exception as e:
         print(f"Error sending verification code: {e}")
@@ -86,7 +86,7 @@ async def send_verification_code(data: EmailCheckIn):
 @app.post("/verify-email-code")
 async def verify_email_code(data: VerificationCodeIn):
     """Verify email with code."""
-    is_valid = email_service.verify_code(data.email, data.code)
+    is_valid = email_service.verify_code(data.email.lower(), data.code)
     
     if is_valid:
         return {
@@ -102,11 +102,11 @@ async def verify_email_code(data: VerificationCodeIn):
 async def resend_verification_code(data: EmailCheckIn):
     """Resend verification code to email."""
     try:
-        code = await email_service.resend_verification_code(data.email)
+        code = await email_service.resend_verification_code(data.email.lower())
         return {
             "success": True,
             "message": "Verification code resent to email",
-            "email": data.email
+            "email": data.email.lower()
         }
     except Exception as e:
         print(f"Error resending verification code: {e}")
@@ -115,7 +115,7 @@ async def resend_verification_code(data: EmailCheckIn):
 
 @app.post("/signup", response_model=schemas.SignupResponse)
 async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
-    existing = await crud.get_user_by_email(db, data.email)
+    existing = await crud.get_user_by_email(db, data.email.lower())
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -143,7 +143,7 @@ async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
 
     user = models.User(
         username=data.username,
-        email=data.email,
+        email=data.email.lower(),
         master_password_hash=hashed,
         encrypted_vault_key=encrypted_vault_key,
         vault_salt=salt,
@@ -166,7 +166,7 @@ async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
 
 @app.post("/login")
 async def login(payload: schemas.LoginIn, db: AsyncSession = Depends(get_session)):
-    user = await crud.get_user_by_email(db, payload.email)
+    user = await crud.get_user_by_email(db, payload.email.lower())
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     if not auth.verify_password(payload.master_password, user.master_password_hash):
@@ -183,7 +183,7 @@ async def verify_recovery_key(data: schemas.RecoveryKeyVerify, db: AsyncSession 
     Verify recovery key for password reset flow.
     Returns success if recovery key matches, allowing user to proceed to password reset.
     """
-    user = await crud.get_user_by_email(db, data.email)
+    user = await crud.get_user_by_email(db, data.email.lower())
     if not user:
         raise HTTPException(status_code=400, detail="Email not found")
     
@@ -204,7 +204,7 @@ async def reset_password(data: schemas.PasswordReset, db: AsyncSession = Depends
     This updates the master password hash in the database.
     Note: User will need to re-create vault key and re-encrypt all passwords with new master password.
     """
-    user = await crud.get_user_by_email(db, data.email)
+    user = await crud.get_user_by_email(db, data.email.lower())
     if not user:
         raise HTTPException(status_code=400, detail="Email not found")
     
@@ -239,11 +239,11 @@ async def update_me(
         current.username = user_update.username
     
     # Check if email is being changed and if it's already registered
-    if user_update.email and user_update.email != current.email:
-        existing = await crud.get_user_by_email(db, user_update.email)
+    if user_update.email and user_update.email.lower() != current.email:
+        existing = await crud.get_user_by_email(db, user_update.email.lower())
         if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
-        current.email = user_update.email
+        current.email = user_update.email.lower()
     
     # Update the user in database
     updated_user = await crud.update_user(db, current)
@@ -286,7 +286,7 @@ async def check_biometric_status(
     It does not require authentication and only returns the enabled status.
     """
     # Find user by email
-    user = await crud.get_user_by_email(db, request.email)
+    user = await crud.get_user_by_email(db, request.email.lower())
     
     if not user:
         return {"biometric_enabled": False, "user_exists": False}
@@ -346,7 +346,7 @@ async def biometric_login(
     4. Same login flow as regular password login, just different authentication method
     """
     # Find user by email
-    user = await crud.get_user_by_email(db, request.email)
+    user = await crud.get_user_by_email(db, request.email.lower())
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
