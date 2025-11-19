@@ -213,9 +213,7 @@ export default function VaultScreen() {
       <View style={styles.header}>
         <View style={{ width: 36 }} />
         <Text style={styles.headerTitle}>My Vault</Text>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddPassword}>
-          <Ionicons name="add-circle" size={28} color="#6B5BFF" />
-        </TouchableOpacity>
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
@@ -588,8 +586,9 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
+    justifyContent: 'flex-start',
+    paddingTop: 2,
+    paddingBottom: 200,
   },
   emptyTitle: {
     fontSize: 18,
