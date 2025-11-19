@@ -24,7 +24,7 @@ const API_BASE_URL = getApiUrl() || API_CONFIG.BASE_URL;
 console.log('🔗 API Base URL:', API_BASE_URL);
 
 // Storage keys
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   TOKEN: 'auth_token',
   USER_ID: 'user_id',
   VAULT_KEY: 'vault_key',
@@ -33,6 +33,7 @@ const STORAGE_KEYS = {
   PUBLIC_KEY: 'public_key',
   ENCRYPTED_PRIVATE_KEY: 'encrypted_private_key',
   EMAIL: 'user_email',
+  IS_FIRST_LOGIN: 'is_first_login',
 };
 
 // Types
@@ -181,6 +182,7 @@ export const authAPI = {
     encrypted_vault_key: string;
     vault_salt: string;
     public_key_pem: string;
+    is_first_login?: boolean;
   }> {
     const normalizedEmail = email.toLowerCase();
     const response = await fetchAPI('/login', {
@@ -194,6 +196,11 @@ export const authAPI = {
     await AsyncStorage.setItem(STORAGE_KEYS.ENCRYPTED_VAULT_KEY, response.encrypted_vault_key);
     await AsyncStorage.setItem(STORAGE_KEYS.VAULT_SALT, response.vault_salt);
     await AsyncStorage.setItem(STORAGE_KEYS.PUBLIC_KEY, response.public_key_pem);
+    
+    // Store is_first_login flag
+    if (response.is_first_login !== undefined) {
+      await AsyncStorage.setItem(STORAGE_KEYS.IS_FIRST_LOGIN, response.is_first_login.toString());
+    }
 
     // Fetch and store user ID
     try {
@@ -212,6 +219,7 @@ export const authAPI = {
     vault_salt: string;
     public_key_pem: string;
     master_password_hash: string;
+    is_first_login?: boolean;
   }> {
     const normalizedEmail = email.toLowerCase();
     const response = await fetchAPI('/biometric/login', {
@@ -225,6 +233,11 @@ export const authAPI = {
     await AsyncStorage.setItem(STORAGE_KEYS.ENCRYPTED_VAULT_KEY, response.encrypted_vault_key);
     await AsyncStorage.setItem(STORAGE_KEYS.VAULT_SALT, response.vault_salt);
     await AsyncStorage.setItem(STORAGE_KEYS.PUBLIC_KEY, response.public_key_pem);
+    
+    // Store is_first_login flag
+    if (response.is_first_login !== undefined) {
+      await AsyncStorage.setItem(STORAGE_KEYS.IS_FIRST_LOGIN, response.is_first_login.toString());
+    }
 
     // Fetch and store user ID
     try {
@@ -284,6 +297,15 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify({ email: email.toLowerCase() }),
     });
+  },
+
+  async completeTutorial(): Promise<{ message: string; is_first_login: boolean }> {
+    const response = await fetchAPI('/complete-tutorial', {
+      method: 'POST',
+    });
+    // Update local storage
+    await AsyncStorage.setItem(STORAGE_KEYS.IS_FIRST_LOGIN, 'false');
+    return response;
   },
 
   async enableBiometric(): Promise<{ message: string; biometric_enabled: boolean }> {

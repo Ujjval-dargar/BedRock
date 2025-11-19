@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-
-const TUTORIAL_COMPLETED_KEY = '@bedrock_tutorial_completed';
+import { authAPI, STORAGE_KEYS } from '../utils/api';
 
 let tutorialCompleted = false;
 
@@ -16,8 +15,11 @@ export function useTutorial() {
   const checkTutorialStatus = async () => {
     try {
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      const completed = await AsyncStorage.getItem(TUTORIAL_COMPLETED_KEY);
-      if (completed === 'true') {
+      
+      // Check is_first_login flag from AsyncStorage (set during login)
+      const isFirstLogin = await AsyncStorage.getItem(STORAGE_KEYS.IS_FIRST_LOGIN);
+      
+      if (isFirstLogin === 'false') {
         setShowTutorial(false);
         tutorialCompleted = true;
       } else {
@@ -25,6 +27,7 @@ export function useTutorial() {
         tutorialCompleted = false;
       }
     } catch (error) {
+      console.error('Error checking tutorial status:', error);
       if (tutorialCompleted) {
         setShowTutorial(false);
       } else {
@@ -37,11 +40,13 @@ export function useTutorial() {
 
   const completeTutorial = async () => {
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      await AsyncStorage.setItem(TUTORIAL_COMPLETED_KEY, 'true');
+      // Call API to mark tutorial as completed in database
+      await authAPI.completeTutorial();
       tutorialCompleted = true;
       setShowTutorial(false);
     } catch (error) {
+      console.error('Error completing tutorial:', error);
+      // Even if API fails, mark as completed locally
       tutorialCompleted = true;
       setShowTutorial(false);
     }
@@ -49,11 +54,13 @@ export function useTutorial() {
 
   const skipTutorial = async () => {
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      await AsyncStorage.setItem(TUTORIAL_COMPLETED_KEY, 'true');
+      // Call API to mark tutorial as completed in database
+      await authAPI.completeTutorial();
       tutorialCompleted = true;
       setShowTutorial(false);
     } catch (error) {
+      console.error('Error skipping tutorial:', error);
+      // Even if API fails, mark as completed locally
       tutorialCompleted = true;
       setShowTutorial(false);
     }
@@ -74,11 +81,13 @@ export function useTutorial() {
   const resetTutorial = async () => {
     try {
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      await AsyncStorage.removeItem(TUTORIAL_COMPLETED_KEY);
+      // Reset local storage flag (Note: This won't update database)
+      await AsyncStorage.setItem(STORAGE_KEYS.IS_FIRST_LOGIN, 'true');
       tutorialCompleted = false;
       setShowTutorial(true);
       setCurrentStep(1);
     } catch (error) {
+      console.error('Error resetting tutorial:', error);
       tutorialCompleted = false;
       setShowTutorial(true);
       setCurrentStep(1);
