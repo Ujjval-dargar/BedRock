@@ -10,10 +10,33 @@ export default function VerificationScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [resendTimer, setResendTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
 
   useEffect(() => {
     loadEmailAndSendCode();
   }, []);
+
+  // Timer countdown effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (resendTimer > 0 && !canResend) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [resendTimer, canResend]);
 
   const loadEmailAndSendCode = async () => {
     const tempEmail = await AsyncStorage.getItem('temp_signup_email');
@@ -74,6 +97,11 @@ export default function VerificationScreen() {
   };
 
   const handleResendOTP = async () => {
+    if (!canResend) {
+      Alert.alert('Please Wait', `You can resend the code in ${resendTimer} seconds`);
+      return;
+    }
+
     if (!email) {
       Alert.alert('Error', 'Email not found');
       return;
@@ -82,7 +110,12 @@ export default function VerificationScreen() {
     try {
       setIsSending(true);
       const response = await authAPI.resendVerificationCode(email);
-      Alert.alert('Success', 'Verification code has been resent to your email');
+      
+      // Reset timer and disable resend button
+      setResendTimer(30);
+      setCanResend(false);
+      
+      Alert.alert('✓ Code Resent', 'Verification code has been resent to your email successfully');
       console.log('✓ Verification code resent:', response.message);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to resend code');
@@ -127,12 +160,22 @@ export default function VerificationScreen() {
                 />
               </View>
                           {/* Resend OTP Link */}
-            <TouchableOpacity 
-              style={styles.resendLink}
+            <View style={styles.resendContainer}>
+            <TouchableOpacity
               onPress={handleResendOTP}
+              disabled={!canResend || isSending}
             >
-              <Text style={styles.resendLinkText}>Did not received OTP?</Text>
+              <Text style={[
+                styles.resendLinkText,
+                (!canResend || isSending) && styles.resendLinkTextDisabled
+              ]}>
+                {canResend 
+                  ? 'Did not receive OTP? Resend' 
+                  : `Resend OTP in ${resendTimer}s`
+                }
+              </Text>
             </TouchableOpacity>
+            </View>
             </View>
 
 
@@ -218,6 +261,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000000',
     fontWeight: '500',
+  },
+  resendLinkTextDisabled: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    opacity: 0.6,
   },
   verifyButton: {
     backgroundColor: '#6B72FF',
