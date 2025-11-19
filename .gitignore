@@ -6,4 +6,5 @@ expo-env.d.ts
 backend_vm/.venv/
 node_modules/
 backend_vm/__pycache__/
+config.ts/
 # @end expo-cli

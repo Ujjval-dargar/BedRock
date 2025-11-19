@@ -112,6 +112,61 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 
 // Auth APIs
 export const authAPI = {
+  async checkEmail(email: string): Promise<{ exists: boolean }> {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const url = `${API_BASE_URL}/signup`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ 
+          username: '__CHECK__', 
+          email, 
+          master_password: '__CHECK__' 
+        }),
+      });
+
+      // If 400 error, check if it's about duplicate email
+      if (response.status === 400) {
+        const error = await response.json().catch(() => ({ detail: '' }));
+        console.log('📧 Email check: Email already registered');
+        if (error.detail && 
+            (error.detail.toLowerCase().includes('email already registered') || 
+             error.detail.toLowerCase().includes('already exists'))) {
+          return { exists: true };
+        }
+      }
+
+      // If 200, email doesn't exist
+      if (response.ok) {
+        console.log('📧 Email check: Email available');
+        return { exists: false };
+      }
+
+      // For other status codes, throw error
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(error.detail || `HTTP ${response.status}`);
+    } catch (error: any) {
+      // If it's our known error types, handle them
+      if (error.message && 
+          (error.message.toLowerCase().includes('email already registered') || 
+           error.message.toLowerCase().includes('already exists'))) {
+        return { exists: true };
+      }
+      // For network errors or other issues, throw them
+      console.error('❌ Email check failed:', error.message);
+      throw error;
+    }
+  },
+
   async signup(username: string, email: string, masterPassword: string): Promise<User> {
     const user = await fetchAPI('/signup', {
       method: 'POST',

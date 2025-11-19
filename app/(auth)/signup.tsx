@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI } from '../../utils/api';
 
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
@@ -24,11 +25,31 @@ export default function SignupScreen() {
     setIsLoading(true);
     
     try {
+      // Check if email already exists
+      const { exists } = await authAPI.checkEmail(email);
+      
+      if (exists) {
+        Alert.alert(
+          'Account Exists', 
+          'This email is already registered. Please login instead.',
+          [
+            { 
+              text: 'Go to Login', 
+              onPress: () => router.replace('/(auth)/login' as any)
+            },
+            { text: 'Try Another Email', style: 'cancel' }
+          ]
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Email is available, proceed with signup
       await AsyncStorage.setItem('temp_signup_email', email);
       router.push('/(auth)/create-master-password' as any);
     } 
-    catch (error) {
-      Alert.alert('Error', 'Failed to proceed with signup');
+    catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to verify email. Please try again.');
     } finally {
       setIsLoading(false);
     }
