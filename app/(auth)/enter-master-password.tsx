@@ -1,16 +1,62 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI, storageAPI } from '../../utils/api';
 import { decryptVaultKey } from '../../utils/crypto';
+import { 
+  isBiometricAvailable, 
+  isBiometricLoginEnabled, 
+  authenticateWithBiometric,
+  getBiometricType 
+} from '../../utils/biometric';
 
 export default function LoginMasterPasswordScreen() {
   const [masterPassword, setMasterPassword] = useState('');
   const [showMasterPassword, setShowMasterPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricType, setBiometricType] = useState('');
+
+  // Check biometric availability and auto-login on mount
+  useEffect(() => {
+    checkBiometricAndAutoLogin();
+  }, []);
+
+  const checkBiometricAndAutoLogin = async () => {
+    try {
+      // Get the current user's email
+      const currentEmail = await AsyncStorage.getItem('temp_login_email');
+      
+      // Check if biometric authentication was used in login screen
+      const biometricAuth = await AsyncStorage.getItem('biometric_authenticated');
+      
+      if (biometricAuth === 'true') {
+        // Auto-login with biometric credentials
+        await AsyncStorage.removeItem('biometric_authenticated');
+        await handleBiometricLogin();
+        return;
+      }
+
+      // Check biometric availability on device
+      // Note: Can't check backend status here as user hasn't logged in yet
+      const available = await isBiometricAvailable();
+      
+      setBiometricAvailable(available);
+      // Always show biometric button if device has it
+      // Backend will handle validation when clicked
+      if (available) {
+        const type = await getBiometricType();
+        setBiometricType(type);
+        setBiometricEnabled(true); // Show the button, backend will validate
+      }
+    } catch (error) {
+      console.error('Error checking biometric:', error);
+    }
+  };
 
   const handleUnlock = async () => {
     if (!masterPassword.trim()) {
@@ -52,9 +98,101 @@ export default function LoginMasterPasswordScreen() {
     }
   };
 
-  const handleBiometric = () => {
-    // TODO: Implement biometric authentication
-    alert('Biometric authentication coming soon');
+    const handleBiometric = async () => {
+    // Check if biometric is available on device
+    if (!biometricAvailable) {
+      Alert.alert('Biometric Unavailable', 'Biometric authentication is not available on this device.');
+      return;
+    }
+    
+    // Check if biometric is enabled for this account BEFORE prompting
+    try {
+      const currentEmail = await AsyncStorage.getItem('temp_login_email');
+      if (!currentEmail) {
+        Alert.alert('Error', 'Email not found. Please go back and enter your email.');
+        return;
+      }
+
+      // Check biometric status from backend
+      const statusCheck = await authAPI.checkBiometricStatus(currentEmail);
+      
+      if (!statusCheck.user_exists) {
+        Alert.alert('Error', 'User not found. Please check your email and try again.');
+        return;
+      }
+
+      if (!statusCheck.biometric_enabled) {
+        // Biometric not enabled for this account - show alert immediately
+        Alert.alert(
+          'Biometric Disabled',
+          'Biometric authentication is not enabled for this account. Please enable it in Settings after logging in.'
+        );
+        return;
+      }
+
+      // Biometric is enabled, proceed with fingerprint prompt
+      await handleBiometricLogin();
+    } catch (error: any) {
+      console.error('Error checking biometric status:', error);
+      Alert.alert('Error', 'Failed to verify biometric status. Please try again.');
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Get the current user's email
+      const currentEmail = await AsyncStorage.getItem('temp_login_email');
+      
+      if (!currentEmail) {
+        Alert.alert('Error', 'Email not found. Please go back and enter your email.');
+        return;
+      }
+      
+      // Authenticate with biometric - this will handle device biometric and backend login
+      const result = await authenticateWithBiometric(currentEmail);
+      
+      if (!result || !result.success || !result.response) {
+        Alert.alert('Error', 'Biometric authentication failed');
+        return;
+      }
+
+      // Biometric login successful, response contains token and crypto data
+      const response = result.response;
+      
+      // Derive vault key from master password hash
+      // The backend returns master_password_hash which we can use to derive the vault key
+      const vaultKey = await decryptVaultKey(
+        response.encrypted_vault_key,
+        response.master_password_hash,
+        response.vault_salt
+      );
+      
+      // Store vault key securely
+      await storageAPI.setVaultKey(vaultKey);
+      
+      // Clear temporary email and biometric flag
+      await AsyncStorage.removeItem('temp_login_email');
+      await AsyncStorage.removeItem('biometric_authenticated');
+      
+      // Navigate to home screen
+      router.replace('/(tabs)/home' as any);
+    } catch (error: any) {
+      console.error('Biometric login error:', error);
+      
+      // Check if error is due to biometric not being enabled
+      if (error.message?.includes('not enabled')) {
+        Alert.alert(
+          'Biometric Disabled', 
+          'Biometric authentication is not enabled for this account. Please enable it in Settings after logging in.'
+        );
+      } else {
+        Alert.alert('Error', error.message || 'Biometric authentication failed');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleForgetPassword = () => {
@@ -130,16 +268,20 @@ export default function LoginMasterPasswordScreen() {
               <Text style={styles.orText}>OR</Text>
             </View>
 
-            {/* Biometric Authentication */}
+            {/* Biometric Authentication - Always visible */}
             <TouchableOpacity
               style={styles.biometricContainer}
               onPress={handleBiometric}
+              disabled={isLoading}
             >
               <MaterialIcons
                 name="fingerprint"
                 size={80}
-                color="#6B72FF"
+                color={isLoading ? '#CCC' : '#6B72FF'}
               />
+              <Text style={styles.biometricText}>
+                Fingerprint
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -273,6 +415,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
     alignSelf: 'center',
+  },
+  biometricText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B72FF',
+    fontWeight: '600',
   },
 });
 

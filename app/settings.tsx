@@ -12,12 +12,24 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
-  Alert
+  Alert,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { passwordAPI, storageAPI, authAPI } from '../utils/api';
 import { aesDecrypt, validatePasswordStrength } from '../utils/crypto';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EditProfileModal } from '../components/edit-profile-modal';
+import {
+  isBiometricAvailable,
+  isBiometricLoginEnabled,
+  enableBiometricLogin,
+  disableBiometricLogin,
+  getBiometricType,
+  getSavedBiometricEmail,
+  isBiometricForDifferentAccount,
+} from '../utils/biometric';
 
 type SettingsItem = {
   id: string;
@@ -78,9 +90,10 @@ const settingsItems: SettingsItem[] = [
     id: 'biometric',
     icon: 'finger-print',
     iconFamily: 'Ionicons',
-    title: 'Biometric Lock',
+    title: 'Biometric Login',
     subtitle: 'Unlock with fingerprint or Face ID',
-    type: 'arrow',
+    type: 'toggle',
+    toggleValue: false, // Will be updated dynamically
     accentColor: '#EC4899',
     accentBackground: '#FCE7F3',
   },
@@ -159,7 +172,13 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const [autoFillEnabled, setAutoFillEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricType, setBiometricType] = useState('Biometric');
   const [loading, setLoading] = useState(true);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [masterPassword, setMasterPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -174,6 +193,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     fetchUserData();
     analyzePasswords();
+    checkBiometricAvailability();
   }, []);
 
   const fetchUserData = async () => {
@@ -183,6 +203,25 @@ export default function SettingsScreen() {
       setEmail(user.email);
     } catch (error) {
       console.error('Failed to fetch user data:', error);
+    }
+  };
+
+  const checkBiometricAvailability = async () => {
+    try {
+      // Get current user's email to check biometric status
+      const currentEmail = await AsyncStorage.getItem('user_email');
+      
+      const available = await isBiometricAvailable();
+      const enabled = currentEmail 
+        ? await isBiometricLoginEnabled(currentEmail)
+        : await isBiometricLoginEnabled();
+      const type = await getBiometricType();
+      
+      setBiometricAvailable(available);
+      setBiometricEnabled(enabled);
+      setBiometricType(type);
+    } catch (error) {
+      console.error('Error checking biometric availability:', error);
     }
   };
 
@@ -251,6 +290,101 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleBiometricToggle = async (value: boolean) => {
+    if (!biometricAvailable) {
+      Alert.alert('Fingerprint Unavailable', 'Fingerprint authentication is not available on this device');
+      return;
+    }
+
+    try {
+      if (value) {
+        // Enable biometric - show password modal
+        const email = await AsyncStorage.getItem('user_email');
+        const userIdStr = await AsyncStorage.getItem('user_id');
+        
+        if (!email || !userIdStr) {
+          Alert.alert('Error', 'User information not found. Please login again.');
+          return;
+        }
+
+        // Check if biometric is enabled for a different account
+        const isDifferentAccount = await isBiometricForDifferentAccount(email);
+        if (isDifferentAccount) {
+          const savedEmail = await getSavedBiometricEmail();
+          Alert.alert(
+            'Biometric Already Enabled',
+            `Fingerprint authentication is currently enabled for ${savedEmail || 'another account'}.\n\nEnabling it for ${email} will disable it for the other account.`,
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+              {
+                text: 'Continue',
+                onPress: () => setShowPasswordModal(true),
+              },
+            ]
+          );
+          return;
+        }
+
+        // Show password input modal
+        setShowPasswordModal(true);
+      } else {
+        // Disable biometric
+        await disableBiometricLogin();
+        setBiometricEnabled(false);
+        Alert.alert('Success', 'Fingerprint login disabled');
+      }
+    } catch (error) {
+      console.error('Error toggling biometric:', error);
+      Alert.alert('Error', 'Failed to update fingerprint settings');
+    }
+  };
+
+  const handleEnableBiometric = async () => {
+    if (!masterPassword.trim()) {
+      Alert.alert('Error', 'Master password is required');
+      return;
+    }
+
+    try {
+      const email = await AsyncStorage.getItem('user_email');
+      const userIdStr = await AsyncStorage.getItem('user_id');
+      
+      if (!email || !userIdStr) {
+        Alert.alert('Error', 'User information not found.');
+        setShowPasswordModal(false);
+        setMasterPassword('');
+        return;
+      }
+
+      const success = await enableBiometricLogin(userIdStr, email, masterPassword);
+      if (success) {
+        setBiometricEnabled(true);
+        setShowPasswordModal(false);
+        setMasterPassword('');
+        Alert.alert('Success', 'Fingerprint login enabled successfully!');
+      } else {
+        Alert.alert('Error', 'Incorrect master password. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Error enabling biometric:', error);
+      // Check if error is due to invalid password
+      if (error.message && error.message.includes('Invalid master password')) {
+        Alert.alert('Error', 'Incorrect master password. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to enable fingerprint authentication');
+      }
+    }
+  };
+
+  const handleCancelPasswordModal = () => {
+    setShowPasswordModal(false);
+    setMasterPassword('');
+    setShowPassword(false);
+  };
+
   const handleItemPress = (itemId: string) => {
     console.log('Pressed:', itemId);
     // Handle navigation based on itemId
@@ -289,7 +423,7 @@ export default function SettingsScreen() {
               <Text style={styles.profileInitials}>{profileInitials}</Text>
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{username || 'Loading...'}</Text>
+              <Text style={styles.profileName}>{username || 'User'}</Text>
               <View style={styles.premiumBadge}>
                 <Ionicons name="sparkles" size={12} color="#6F6BF5" />
                 <Text style={styles.premiumText}>Premium Plan</Text>
@@ -357,6 +491,8 @@ export default function SettingsScreen() {
                     ? autoFillEnabled 
                     : item.id === 'notifications'
                     ? notificationsEnabled
+                    : item.id === 'biometric'
+                    ? biometricEnabled && biometricAvailable
                     : undefined
                 }
                 onToggleChange={
@@ -364,6 +500,8 @@ export default function SettingsScreen() {
                     ? setAutoFillEnabled 
                     : item.id === 'notifications'
                     ? setNotificationsEnabled
+                    : item.id === 'biometric'
+                    ? handleBiometricToggle
                     : undefined
                 }
                 onPress={() => handleItemPress(item.id)}
@@ -410,6 +548,64 @@ export default function SettingsScreen() {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Password Modal for Biometric Enable */}
+      <Modal
+        visible={showPasswordModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelPasswordModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Enable Fingerprint</Text>
+            <Text style={styles.modalSubtitle}>
+              Enter your master password to enable fingerprint authentication
+            </Text>
+
+            {/* Password Input */}
+            <View style={styles.modalInputWrapper}>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Master Password"
+                placeholderTextColor="#999"
+                value={masterPassword}
+                onChangeText={setMasterPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus={true}
+              />
+              <TouchableOpacity
+                style={styles.modalEyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={20}
+                  color="#626262"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Buttons */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={handleCancelPasswordModal}
+              >
+                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonEnable]}
+                onPress={handleEnableBiometric}
+              >
+                <Text style={styles.modalButtonTextEnable}>Enable</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <EditProfileModal
         visible={editModalVisible}
@@ -623,5 +819,90 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#EF4444',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalInputWrapper: {
+    position: 'relative',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1F2937',
+    paddingVertical: 0,
+  },
+  modalEyeIcon: {
+    padding: 4,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#F3F4F6',
+  },
+  modalButtonEnable: {
+    backgroundColor: '#6B72FF',
+  },
+  modalButtonTextCancel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  modalButtonTextEnable: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

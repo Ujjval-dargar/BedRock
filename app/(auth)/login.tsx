@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -88,7 +89,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Mobile Number Login Link */}
+            {/* Mobile Number Login Link
             <TouchableOpacity 
               style={styles.mobileLink}
               onPress={() => {
@@ -97,7 +98,7 @@ export default function LoginScreen() {
               }}
             >
               <Text style={styles.mobileLinkText}>Or Sign In with Mobile Number</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

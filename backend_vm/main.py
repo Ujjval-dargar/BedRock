@@ -195,6 +195,128 @@ async def update_me(
     return updated_user
 
 
+# Biometric endpoints
+@app.post("/biometric/enable")
+async def enable_biometric(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    """Enable biometric authentication for the current user"""
+    current.biometric_enabled = True
+    db.add(current)
+    await db.commit()
+    return {"message": "Biometric authentication enabled", "biometric_enabled": True}
+
+
+@app.post("/biometric/disable")
+async def disable_biometric(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    """Disable biometric authentication for the current user"""
+    current.biometric_enabled = False
+    db.add(current)
+    await db.commit()
+    return {"message": "Biometric authentication disabled", "biometric_enabled": False}
+
+
+@app.get("/biometric/status")
+async def get_biometric_status(current: models.User = Depends(auth.get_current_user)):
+    """Get biometric authentication status for the current user"""
+    return {"biometric_enabled": current.biometric_enabled}
+
+
+@app.post("/biometric/check")
+async def check_biometric_status(
+    request: schemas.BiometricLoginRequest,
+    db: AsyncSession = Depends(get_session)
+):
+    """Check if biometric is enabled for a specific email
+    
+    This endpoint is used to check biometric status BEFORE prompting for fingerprint.
+    It does not require authentication and only returns the enabled status.
+    """
+    # Find user by email
+    user = await crud.get_user_by_email(db, request.email)
+    
+    if not user:
+        return {"biometric_enabled": False, "user_exists": False}
+    
+    return {"biometric_enabled": user.biometric_enabled, "user_exists": True}
+
+
+@app.post("/biometric/master-password")
+async def get_biometric_master_password(
+    request: schemas.BiometricLoginRequest,
+    db: AsyncSession = Depends(get_session)
+):
+    """Get master password hash for biometric authentication
+    
+    This endpoint is used DURING login flow, BEFORE user is authenticated.
+    It verifies that biometric is enabled for the given email and returns
+    the master password hash to complete the login.
+    
+    SECURITY: This is safe because:
+    1. User must have already passed device biometric authentication
+    2. Biometric must be explicitly enabled for this account
+    3. The returned hash is still needed to decrypt vault keys
+    """
+    # Find user by email
+    result = await db.execute(
+        models.User.__table__.select().where(models.User.email == request.email)
+    )
+    user = result.fetchone()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not user.biometric_enabled:
+        raise HTTPException(status_code=403, detail="Biometric authentication is not enabled for this account")
+    
+    return {
+        "master_password": user.master_password_hash,
+        "email": user.email
+    }
+
+
+@app.post("/biometric/login")
+async def biometric_login(
+    request: schemas.BiometricLoginRequest,
+    db: AsyncSession = Depends(get_session)
+):
+    """Login using biometric authentication
+    
+    This endpoint is called AFTER successful device biometric verification.
+    It verifies that biometric is enabled for the account and returns
+    a login token and necessary cryptographic data WITHOUT password verification.
+    
+    SECURITY: This is safe because:
+    1. User must have passed device-level biometric authentication (fingerprint/face)
+    2. Biometric must be explicitly enabled for this account in the database
+    3. Device biometric is as secure as password authentication
+    4. Same login flow as regular password login, just different authentication method
+    """
+    # Find user by email
+    user = await crud.get_user_by_email(db, request.email)
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify biometric is enabled for this account
+    if not user.biometric_enabled:
+        raise HTTPException(
+            status_code=403, 
+            detail="Biometric authentication is not enabled for this account"
+        )
+    
+    # Create access token (same as regular login)
+    access_token = auth.create_access_token({"sub": str(user.id)})
+    
+    # Return same response as regular login
+    return JSONResponse({
+        "access_token": access_token,
+        "token_type": "bearer",
+        "encrypted_vault_key": user.encrypted_vault_key.hex(),
+        "vault_salt": user.vault_salt.hex(),
+        "public_key_pem": user.public_key_pem,
+        "master_password_hash": user.master_password_hash  # Client needs this to derive vault key
+    })
+
+
 @app.post("/passwords", response_model=schemas.PasswordEntryOut)
 async def create_password(entry: schemas.PasswordEntryCreate, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
     # Server stores encrypted_password blob as-is

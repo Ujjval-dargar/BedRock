@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
@@ -17,6 +17,8 @@ class User(Base):
     public_key_pem = Column(Text, nullable=False)
     # Private key encrypted with vault key
     encrypted_private_key = Column(LargeBinary, nullable=False)
+    # Biometric authentication enabled flag
+    biometric_enabled = Column(Boolean, default=False, nullable=False)
 
     password_entries = relationship("PasswordEntry", back_populates="owner")
     outgoing_shares = relationship("SharedPassword", back_populates="from_user", foreign_keys='SharedPassword.from_user_id')

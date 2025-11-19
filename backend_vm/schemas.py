@@ -13,6 +13,7 @@ class UserOut(BaseModel):
     id: int
     username: str
     email: EmailStr
+    biometric_enabled: bool = False
 
     class Config:
         from_attributes = True
@@ -31,6 +32,10 @@ class Token(BaseModel):
 class LoginIn(BaseModel):
     email: EmailStr
     master_password: str
+
+
+class BiometricLoginRequest(BaseModel):
+    email: EmailStr
 
 
 class UsernameCheckIn(BaseModel):

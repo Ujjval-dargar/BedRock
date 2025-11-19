@@ -203,6 +203,36 @@ export const authAPI = {
     return response;
   },
 
+  async biometricLogin(email: string): Promise<{
+    access_token: string;
+    encrypted_vault_key: string;
+    vault_salt: string;
+    public_key_pem: string;
+    master_password_hash: string;
+  }> {
+    const response = await fetchAPI('/biometric/login', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+
+    // Store auth token and user data (same as regular login)
+    await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, response.access_token);
+    await AsyncStorage.setItem(STORAGE_KEYS.EMAIL, email);
+    await AsyncStorage.setItem(STORAGE_KEYS.ENCRYPTED_VAULT_KEY, response.encrypted_vault_key);
+    await AsyncStorage.setItem(STORAGE_KEYS.VAULT_SALT, response.vault_salt);
+    await AsyncStorage.setItem(STORAGE_KEYS.PUBLIC_KEY, response.public_key_pem);
+
+    // Fetch and store user ID
+    try {
+      const user = await fetchAPI('/me');
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_ID, user.id.toString());
+    } catch (error) {
+      console.error('Failed to fetch user ID:', error);
+    }
+
+    return response;
+  },
+
   async getMe(): Promise<User> {
     return await fetchAPI('/me');
   },
@@ -250,6 +280,56 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
+  },
+
+  async enableBiometric(): Promise<{ message: string; biometric_enabled: boolean }> {
+    return await fetchAPI('/biometric/enable', {
+      method: 'POST',
+    });
+  },
+
+  async disableBiometric(): Promise<{ message: string; biometric_enabled: boolean }> {
+    return await fetchAPI('/biometric/disable', {
+      method: 'POST',
+    });
+  },
+
+  async getBiometricStatus(): Promise<{ biometric_enabled: boolean }> {
+    return await fetchAPI('/biometric/status', {
+      method: 'GET',
+    });
+  },
+
+  async checkBiometricStatus(email: string): Promise<{ biometric_enabled: boolean; user_exists: boolean }> {
+    return await fetchAPI('/biometric/check', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async getBiometricMasterPassword(email: string): Promise<{ master_password: string; email: string }> {
+    return await fetchAPI('/biometric/master-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async verifyMasterPassword(email: string, masterPassword: string): Promise<{ valid: boolean }> {
+    try {
+      // Try to login with the credentials to verify password
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, master_password: masterPassword }),
+      });
+
+      return { valid: response.ok };
+    } catch (error) {
+      console.error('Error verifying master password:', error);
+      return { valid: false };
+    }
   },
 };
 
