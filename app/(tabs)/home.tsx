@@ -6,10 +6,11 @@ import { SearchBar } from '@/components/search-bar';
 import { TutorialOverlay } from '@/components/tutorial-overlay';
 import { useTutorial } from '@/hooks/use-tutorial';
 import { router } from 'expo-router';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { authAPI } from '@/utils/api';
 
 const NAV_BAR_TOTAL_HEIGHT = 90; // Navigation bar height + FAB overlap + margin
 
@@ -18,6 +19,8 @@ export default function HomeScreen() {
   const bottomPadding = NAV_BAR_TOTAL_HEIGHT + insets.bottom + 20;
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const {
     showTutorial,
     isLoading: tutorialLoading,
@@ -28,10 +31,25 @@ export default function HomeScreen() {
     skipTutorial,
   } = useTutorial();
 
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const user = await authAPI.getMe();
+      setUsername(user.username);
+      setEmail(user.email);
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+    }
+  };
+
   // Refresh components when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       setRefreshKey(prev => prev + 1);
+      fetchUserData();
     }, [])
   );
 
@@ -63,6 +81,8 @@ export default function HomeScreen() {
         visible={profileModalVisible}
         onClose={() => setProfileModalVisible(false)}
         onLogout={handleLogout}
+        username={username}
+        email={email}
       />
 
       {!tutorialLoading && (

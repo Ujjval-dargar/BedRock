@@ -14,7 +14,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { passwordAPI, storageAPI } from '../utils/api';
+import { passwordAPI, storageAPI, authAPI } from '../utils/api';
 import { aesDecrypt, validatePasswordStrength } from '../utils/crypto';
 
 type SettingsItem = {
@@ -158,17 +158,30 @@ export default function SettingsScreen() {
   const [autoFillEnabled, setAutoFillEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [passwordStats, setPasswordStats] = useState({
     total: 0,
     safe: 0,
     securePercentage: 0,
   });
 
-  const profileInitials = 'SJ';
+  const profileInitials = username ? username.substring(0, 2).toUpperCase() : 'U';
 
   useEffect(() => {
+    fetchUserData();
     analyzePasswords();
   }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const user = await authAPI.getMe();
+      setUsername(user.username);
+      setEmail(user.email);
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+    }
+  };
 
   const analyzePasswords = async () => {
     try {
@@ -261,7 +274,7 @@ export default function SettingsScreen() {
               <Text style={styles.profileInitials}>{profileInitials}</Text>
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>Stephen Johnson</Text>
+              <Text style={styles.profileName}>{username || 'Loading...'}</Text>
               <View style={styles.premiumBadge}>
                 <Ionicons name="sparkles" size={12} color="#6F6BF5" />
                 <Text style={styles.premiumText}>Premium Plan</Text>

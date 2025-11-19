@@ -15,9 +15,11 @@ interface ProfileModalProps {
   visible: boolean;
   onClose: () => void;
   onLogout?: () => void;
+  username?: string;
+  email?: string;
 }
 
-export function ProfileModal({ visible, onClose, onLogout }: ProfileModalProps) {
+export function ProfileModal({ visible, onClose, onLogout, username = 'User', email = '' }: ProfileModalProps) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(1000);
   const opacity = useSharedValue(0);
@@ -98,14 +100,14 @@ export function ProfileModal({ visible, onClose, onLogout }: ProfileModalProps) 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Username:</Text>
               <View style={styles.fieldValue}>
-                <Text style={styles.fieldText}>Stephen</Text>
+                <Text style={styles.fieldText}>{username}</Text>
               </View>
             </View>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Email:</Text>
               <View style={styles.fieldValue}>
-                <Text style={styles.fieldText}>stephen098@xyz.com</Text>
+                <Text style={styles.fieldText}>{email}</Text>
               </View>
             </View>
           </View>
