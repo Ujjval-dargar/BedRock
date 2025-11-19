@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,13 +13,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { passwordAPI, storageAPI } from "../../utils/api";
 import { aesEncrypt } from "../../utils/crypto";
 import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 export default function CreatePasswordScreen(): React.ReactElement {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const [title, setTitle] = useState<string>("");
   const [category, setCategory] = useState<string>("Browser");
@@ -29,6 +30,13 @@ export default function CreatePasswordScreen(): React.ReactElement {
   const [secure, setSecure] = useState<boolean>(true);
   const [notes, setNotes] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Pre-fill password if coming from generator
+  useEffect(() => {
+    if (params.generatedPassword && typeof params.generatedPassword === 'string') {
+      setPassword(params.generatedPassword);
+    }
+  }, [params.generatedPassword]);
 
   const categories = [
     { label: "Browser", icon: "globe-outline", color: "#3B82F6" },

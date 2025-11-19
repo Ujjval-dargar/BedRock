@@ -63,9 +63,10 @@ export default function GeneratorScreen(): React.ReactElement {
       return;
     }
     // Navigate to add-password screen with the generated password
-    const handleAdd = () => {
-    router.push('/(password-management)/add-password' as any);
-  };
+    router.push({
+      pathname: '/(password-management)/add-password',
+      params: { generatedPassword: password }
+    } as any);
   };
 
   // Generate initial password on mount
@@ -158,12 +159,12 @@ export default function GeneratorScreen(): React.ReactElement {
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
-              <Ionicons name="copy-outline" size={18} color="#fff" />
+              <Ionicons name="copy-outline" size={20} color="#fff" />
               <Text style={styles.copyButtonText}>Copy</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.useButton} onPress={useInNewPassword}>
-              <Ionicons name="add-circle-outline" size={18} color="#6B5BFF" />
-              <Text style={styles.useButtonText}>Use in New Password</Text>
+              <Ionicons name="add-circle" size={20} color="#6B5BFF" />
+              <Text style={styles.useButtonText}>Use Password</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: BOTTOM_SAFE_AREA,
+    paddingBottom: 80,
   },
   passwordCard: {
     backgroundColor: "#fff",
@@ -376,17 +377,23 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
   },
   copyButton: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 8,
     backgroundColor: "#6B5BFF",
-    padding: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    shadowColor: "#6B5BFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   copyButtonText: {
     color: "#fff",
@@ -398,12 +405,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#F0EDFF",
-    padding: 14,
-    borderRadius: 12,
+    gap: 8,
+    backgroundColor: "#fff",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: "#6B5BFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   useButtonText: {
     color: "#6B5BFF",
@@ -464,13 +477,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   optionsContainer: {
-    gap: 12,
+    gap: 6,
   },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   optionLeft: {
     flexDirection: "row",
