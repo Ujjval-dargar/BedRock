@@ -119,10 +119,9 @@ async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Check if username already exists
-    existing_username = await crud.get_user_by_username(db, data.username)
-    if existing_username:
-        raise HTTPException(status_code=400, detail="Username already taken")
+    # Validate username length (minimum 3 characters)
+    if len(data.username.strip()) < 3:
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
 
     # hash master password for authentication
     hashed = auth.hash_password(data.master_password)
@@ -231,11 +230,10 @@ async def update_me(
     db: AsyncSession = Depends(get_session)
 ):
     """Update current user's username and/or email."""
-    # Check if username is being changed and if it's already taken
+    # Update username if provided (minimum 3 characters)
     if user_update.username and user_update.username != current.username:
-        existing = await crud.get_user_by_username(db, user_update.username)
-        if existing:
-            raise HTTPException(status_code=400, detail="Username already taken")
+        if len(user_update.username.strip()) < 3:
+            raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
         current.username = user_update.username
     
     # Check if email is being changed and if it's already registered

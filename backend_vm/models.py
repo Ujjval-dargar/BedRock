@@ -7,7 +7,7 @@ import datetime
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, nullable=False, index=True)
+    username = Column(String(50), nullable=False, index=True)
     email = Column(String(200), unique=True, nullable=False, index=True)
     master_password_hash = Column(String(512), nullable=False)
     # vault key encrypted with key derived from master password

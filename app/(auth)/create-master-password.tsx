@@ -20,6 +20,12 @@ export default function MasterPasswordScreen() {
       return;
     }
 
+    // Validate username length (minimum 3 characters)
+    if (username.trim().length < 3) {
+      Alert.alert('Error', 'Username must be at least 3 characters');
+      return;
+    }
+
     if (masterPassword !== confirmMasterPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
@@ -33,18 +39,6 @@ export default function MasterPasswordScreen() {
     setIsLoading(true);
     
     try {
-      // Check if username is already taken
-      const usernameCheck = await authAPI.checkUsername(username);
-      if (usernameCheck.exists) {
-        Alert.alert(
-          'Username Taken',
-          'This username is already in use. Please choose a different username.',
-          [{ text: 'OK' }]
-        );
-        setIsLoading(false);
-        return;
-      }
-
       // Get email from previous screen
       const email = await AsyncStorage.getItem('temp_signup_email');
       if (!email) {
