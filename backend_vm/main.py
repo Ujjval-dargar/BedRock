@@ -61,6 +61,13 @@ async def check_email(data: EmailCheckIn, db: AsyncSession = Depends(get_session
     return {"exists": existing is not None, "available": existing is None}
 
 
+@app.post("/check-username")
+async def check_username(data: schemas.UsernameCheckIn, db: AsyncSession = Depends(get_session)):
+    """Check if a username is already taken."""
+    existing = await crud.get_user_by_username(db, data.username)
+    return {"exists": existing is not None, "available": existing is None}
+
+
 @app.post("/send-verification-code")
 async def send_verification_code(data: EmailCheckIn):
     """Send verification code to email."""

@@ -139,6 +139,33 @@ export const authAPI = {
     }
   },
 
+  async checkUsername(username: string): Promise<{ exists: boolean }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/check-username`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('👤 Username check:', data.exists ? 'Already taken' : 'Available');
+        return { exists: data.exists };
+      }
+
+      // If endpoint fails, fall back to allowing signup (don't block users)
+      console.log('⚠ Username check endpoint error, allowing signup');
+      return { exists: false };
+      
+    } catch (error: any) {
+      // Network errors - assume username is available to not block signup
+      console.log('⚠ Network error during username check, allowing signup');
+      return { exists: false };
+    }
+  },
+
   async signup(username: string, email: string, masterPassword: string): Promise<User> {
     const user = await fetchAPI('/signup', {
       method: 'POST',

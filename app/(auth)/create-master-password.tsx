@@ -33,6 +33,18 @@ export default function MasterPasswordScreen() {
     setIsLoading(true);
     
     try {
+      // Check if username is already taken
+      const usernameCheck = await authAPI.checkUsername(username);
+      if (usernameCheck.exists) {
+        Alert.alert(
+          'Username Taken',
+          'This username is already in use. Please choose a different username.',
+          [{ text: 'OK' }]
+        );
+        setIsLoading(false);
+        return;
+      }
+
       // Get email from previous screen
       const email = await AsyncStorage.getItem('temp_signup_email');
       if (!email) {

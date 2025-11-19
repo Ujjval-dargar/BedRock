@@ -28,6 +28,10 @@ class LoginIn(BaseModel):
     master_password: str
 
 
+class UsernameCheckIn(BaseModel):
+    username: str
+
+
 class PasswordEntryCreate(BaseModel):
     title: str
     username: Optional[str] = None
