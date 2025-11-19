@@ -167,40 +167,40 @@ export function TutorialOverlay({
     const rightSectionWidth = rightSectionEnd - rightSectionStart;
 
     let highlightStyle: any = {};
-    const circleSize = 80;
+    const circleSize = 70;
 
     switch (step.target) {
       case 'vault':
         const vaultX = leftSectionStart + leftSectionWidth * 0.75;
         highlightStyle = {
-          bottom: navBarBottom + navBarHeight / 2 - circleSize / 2,
-          left: vaultX - circleSize / 2,
+          bottom: navBarBottom + navBarHeight / 2 - circleSize / 2 - 18,
+          left: vaultX - circleSize / 2 - 4,
           width: circleSize,
           height: circleSize,
         };
         break;
       case 'fab':
         highlightStyle = {
-          bottom: navBarBottom + navBarHeight / 2 - 14,
-          left: navBarCenterX - circleSize / 2 - 4,
-          width: circleSize,
-          height: circleSize,
+          bottom: navBarBottom + navBarHeight / 2 - 27,
+          left: navBarCenterX - circleSize / 2 - 5,
+          width: circleSize + 2,
+          height: circleSize + 2,
         };
         break;
       case 'generator':
         const generatorX = rightSectionStart + rightSectionWidth * 0.25;
         highlightStyle = {
-          bottom: navBarBottom + navBarHeight / 2 - circleSize / 2,
-          left: generatorX - circleSize / 2,
-          width: circleSize,
-          height: circleSize,
+          bottom: navBarBottom + navBarHeight / 2 - circleSize / 2 - 20,
+          left: generatorX - circleSize / 2 + 4,
+          width: circleSize + 2,
+          height: circleSize + 2,
         };
         break;
       case 'risks':
         const risksX = rightSectionStart + rightSectionWidth * 0.75;
         highlightStyle = {
-          bottom: navBarBottom + navBarHeight / 2 - circleSize / 2,
-          left: risksX - circleSize / 2,
+          bottom: navBarBottom + navBarHeight / 2 - circleSize / 2 - 20, 
+          left: risksX - circleSize / 2 + 12,
           width: circleSize,
           height: circleSize,
         };
