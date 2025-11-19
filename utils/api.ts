@@ -333,6 +333,9 @@ export const authAPI = {
   },
 };
 
+// Backwards-compatible alias: some bundles/imports reference `authApi` (lowercase)
+export const authApi = authAPI;
+
 // Password APIs
 export const passwordAPI = {
   async create(
