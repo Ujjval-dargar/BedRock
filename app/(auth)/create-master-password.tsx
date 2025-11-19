@@ -25,8 +25,8 @@ export default function MasterPasswordScreen() {
       return;
     }
 
-    if (masterPassword.length < 12) {
-      Alert.alert('Error', 'Master password must be at least 12 characters');
+    if (masterPassword.length < 8) {
+      Alert.alert('Error', 'Master password must be at least 8 characters');
       return;
     }
 
