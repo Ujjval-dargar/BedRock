@@ -71,7 +71,10 @@ export default function HelpSupportScreen() {
       icon: 'book',
       title: 'Documentation',
       description: 'Browse guides and tutorials',
-      action: () => {}, // Would open docs
+      action: async () => {
+        const url = 'https://docs.google.com/document/d/154Fkf5U77hcLqPKA_41rIHYcXxw5NyKB-Yt0ggxA0Es/edit?usp=sharing';
+        await WebBrowser.openBrowserAsync(url);
+      },
     },
   ];
 

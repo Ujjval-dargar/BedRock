@@ -14,15 +14,20 @@ export function HomeHeader({ onProfilePress, username = 'User' }: HomeHeaderProp
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
-      <Pressable style={styles.userChip} onPress={onProfilePress}>
-        <View style={styles.avatar}>
-          <MaterialIcons name="person" size={20} color="#64B5F6" />
+      <View style={styles.brandContainer}>
+        <View style={styles.logoCircle}>
+          <MaterialIcons name="lock" size={20} color="#FFFFFF" />
         </View>
-        <Text style={styles.userName}>{username}</Text>
-      </Pressable>
-      <Pressable style={styles.settingsButton} onPress={() => router.push('/settings')}>
-        <MaterialIcons name="settings" size={24} color="#333" />
-      </Pressable>
+        <Text style={styles.brandName}>BedRock</Text>
+      </View>
+      <View style={styles.rightActions}>
+        <Pressable style={styles.userButton} onPress={onProfilePress}>
+          <MaterialIcons name="person" size={24} color="#6F6BF5" />
+        </Pressable>
+        <Pressable style={styles.settingsButton} onPress={() => router.push('/settings')}>
+          <MaterialIcons name="settings" size={24} color="#333" />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -35,27 +40,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  userChip: {
+  brandContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    gap: 12,
   },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E3F2FD',
+  logoCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#6F6BF5',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#6F6BF5',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+  brandName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#6F6BF5',
+    letterSpacing: 0.5,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  userButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F0FF',
+    borderRadius: 20,
   },
   settingsButton: {
     width: 40,

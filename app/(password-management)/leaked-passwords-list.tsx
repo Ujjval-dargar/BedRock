@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, ScrollView, View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import BackButton from '@/components/back-button';
 import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 import { passwordAPI, storageAPI } from '@/utils/api';
 import { aesDecrypt } from '@/utils/crypto';
-import { getWebsiteIcon, iconImageMap } from '@/utils/website-icons';
 import * as Crypto from 'expo-crypto';
 
 interface LeakedPassword {
@@ -18,6 +18,20 @@ interface LeakedPassword {
   email: string;
   timesLeaked: number;
   foundDate: string;
+  category: string;
+}
+
+function getCategoryDisplay(category?: string) {
+  const cat = category || 'Other';
+  const displays: Record<string, { icon: string; color: string; bg: string }> = {
+    Browser: { icon: 'globe', color: '#3B82F6', bg: '#EFF6FF' },
+    Social: { icon: 'users', color: '#EC4899', bg: '#FCE7F3' },
+    Work: { icon: 'briefcase', color: '#8B5CF6', bg: '#F3E8FF' },
+    Card: { icon: 'credit-card', color: '#10B981', bg: '#D1FAE5' },
+    Email: { icon: 'envelope', color: '#F59E0B', bg: '#FEF3C7' },
+    Other: { icon: 'th', color: '#6B7280', bg: '#F3F4F6' },
+  };
+  return displays[cat] || displays.Other;
 }
 
 // Check if password has been leaked using Have I Been Pwned API
@@ -104,6 +118,7 @@ export default function LeakedPasswordsListScreen() {
               email: pwd.username || 'No username',
               timesLeaked: leakCount,
               foundDate: pwd.created_at || new Date().toISOString(),
+              category: pwd.category || 'Other',
             });
           }
         } catch (error) {
@@ -174,7 +189,9 @@ export default function LeakedPasswordsListScreen() {
                 </ThemedText>
               </View>
             </View>
-            {passwords.map((pwd) => (
+            {passwords.map((pwd) => {
+              const categoryDisplay = getCategoryDisplay(pwd.category);
+              return (
               <TouchableOpacity
                 key={pwd.id}
                 style={styles.card}
@@ -184,11 +201,8 @@ export default function LeakedPasswordsListScreen() {
                 })}
               >
                 <View style={styles.cardHeader}>
-                  <View style={styles.iconContainer}>
-                    <Image
-                      source={iconImageMap[getWebsiteIcon(pwd.website).imagePath || 'default']}
-                      style={styles.icon}
-                    />
+                  <View style={[styles.iconContainer, { backgroundColor: categoryDisplay.bg }]}>
+                    <FontAwesome name={categoryDisplay.icon as any} size={24} color={categoryDisplay.color} />
                   </View>
                   <View style={styles.textContainer}>
                     <ThemedText style={styles.website}>{pwd.website}</ThemedText>
@@ -205,7 +219,8 @@ export default function LeakedPasswordsListScreen() {
                   </View>
                 </View>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </>
         )}
       </ScrollView>
@@ -298,14 +313,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-  },
-  icon: {
-    width: 32,
-    height: 32,
   },
   textContainer: {
     flex: 1,

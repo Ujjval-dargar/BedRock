@@ -24,6 +24,10 @@ export default function WelcomeScreen() {
 
         {/* Text Content Section */}
         <View style={styles.textContainer}>
+          <View style={styles.brandContainer}>
+            <Text style={styles.brandName}>BedRock</Text>
+            <View style={styles.brandUnderline} />
+          </View>
           <Text style={styles.heading}>All Your Passwords, One Master Key.</Text>
           <Text style={styles.subtitle}>
             Manage all of your passwords and logins from one single, secure place
@@ -77,6 +81,23 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 32,
     paddingHorizontal: 20,
+  },
+  brandContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  brandName: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#6F6BF5',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  brandUnderline: {
+    width: 60,
+    height: 4,
+    backgroundColor: '#6F6BF5',
+    borderRadius: 2,
   },
   heading: {
     fontSize: 26,

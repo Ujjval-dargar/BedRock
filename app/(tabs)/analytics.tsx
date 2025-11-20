@@ -329,7 +329,7 @@ export default function AnalyticsScreen() {
         />
         <CategoryCard
           icon="warning"
-          title="Leak Password"
+          title="Leaked Password"
           count={passwordStats.leaked}
           backgroundColor={PASSWORD_COLORS.leaked.light}
           iconColor={PASSWORD_COLORS.leaked.primary}
