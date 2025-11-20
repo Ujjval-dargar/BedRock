@@ -151,56 +151,73 @@ export function TutorialOverlay({
   const getHighlightStyle = () => {
     if (!step.target) return null;
 
-    const navBarBottom = insets.bottom + 8;
-    const navBarCenterX = SCREEN_WIDTH / 2;
-    const navBarMargin = 16;
-    const navBarPadding = 4;
-    const fabSize = 56;
-    const navBarHeight = 70;
+    const navBarHeight = 60; // NAV_BAR_HEIGHT from custom-bottom-nav
+    const fabSize = 56; // FAB_SIZE from custom-bottom-nav
+    const navBarPaddingHorizontal = 4;
+    const navItemMaxWidth = 80;
+    const navItemPaddingHorizontal = 4;
+    const circleSize = 90;
+    
+    // Calculate vertical position relative to screen bottom
+    const navBarBottom = insets.bottom;
+    const verticalCenter = navBarBottom + (navBarHeight / 2) - (circleSize / 2);
 
-    const leftSectionStart = navBarMargin + navBarPadding;
-    const leftSectionEnd = navBarCenterX - 28;
-    const leftSectionWidth = leftSectionEnd - leftSectionStart;
-
-    const rightSectionStart = navBarCenterX + 28;
-    const rightSectionEnd = SCREEN_WIDTH - navBarMargin - navBarPadding;
-    const rightSectionWidth = rightSectionEnd - rightSectionStart;
+    // Left section: justifyContent: 'flex-start', paddingRight: fabSize/2 (28)
+    // Right section: justifyContent: 'flex-end', paddingLeft: fabSize/2 (28)
+    // Each nav item: flex: 1, maxWidth: 80, paddingHorizontal: 4
+    
+    // Calculate section boundaries
+    const leftSectionEnd = (SCREEN_WIDTH / 2) - (fabSize / 2);
+    const rightSectionStart = (SCREEN_WIDTH / 2) + (fabSize / 2);
+    
+    // Items are flex: 1 with maxWidth: 80, so they take either their flex space or 80px, whichever is smaller
+    const leftSectionWidth = leftSectionEnd - navBarPaddingHorizontal;
+    const rightSectionWidth = SCREEN_WIDTH - rightSectionStart - navBarPaddingHorizontal;
+    
+    // Each section has 2 items with paddingHorizontal: 4 (total 8px per item)
+    const itemWidth = Math.min(navItemMaxWidth, leftSectionWidth / 2);
 
     let highlightStyle: any = {};
-    const circleSize = 70;
 
     switch (step.target) {
       case 'vault':
-        const vaultX = leftSectionStart + leftSectionWidth * 0.75;
+        // Second item in left section (flex-start alignment)
+        // Position: edge + firstItemWidth + half of secondItem
+        const vaultX = navBarPaddingHorizontal + itemWidth + (itemWidth / 2);
         highlightStyle = {
-          bottom: navBarBottom + navBarHeight / 2 - circleSize / 2 - 18,
-          left: vaultX - circleSize / 2 - 4,
+          bottom: verticalCenter-6,
+          left: vaultX - (circleSize / 2),
           width: circleSize,
           height: circleSize,
         };
         break;
       case 'fab':
+        // FAB is absolutely positioned at center
         highlightStyle = {
-          bottom: navBarBottom + navBarHeight / 2 - 27,
-          left: navBarCenterX - circleSize / 2 - 5,
-          width: circleSize + 2,
-          height: circleSize + 2,
+          bottom: navBarBottom + (navBarHeight / 2) - (circleSize / 2)+18,
+          left: (SCREEN_WIDTH / 2) - (circleSize / 2)-4,
+          width: circleSize,
+          height: circleSize,
         };
         break;
       case 'generator':
-        const generatorX = rightSectionStart + rightSectionWidth * 0.25;
+        // First item in right section (flex-end alignment)
+        // Calculate from the end of screen backwards
+        const generatorX = SCREEN_WIDTH - navBarPaddingHorizontal - itemWidth - (itemWidth / 2);
         highlightStyle = {
-          bottom: navBarBottom + navBarHeight / 2 - circleSize / 2 - 20,
-          left: generatorX - circleSize / 2 + 4,
-          width: circleSize + 2,
-          height: circleSize + 2,
+          bottom: verticalCenter-10,
+          left: generatorX - (circleSize / 2),
+          width: circleSize,
+          height: circleSize,
         };
         break;
       case 'risks':
-        const risksX = rightSectionStart + rightSectionWidth * 0.75;
+        // Second item in right section (flex-end alignment)
+        // Calculate from the end of screen backwards
+        const risksX = SCREEN_WIDTH - navBarPaddingHorizontal - (itemWidth / 2);
         highlightStyle = {
-          bottom: navBarBottom + navBarHeight / 2 - circleSize / 2 - 20, 
-          left: risksX - circleSize / 2 + 12,
+          bottom: verticalCenter-6,
+          left: risksX - (circleSize / 2),
           width: circleSize,
           height: circleSize,
         };

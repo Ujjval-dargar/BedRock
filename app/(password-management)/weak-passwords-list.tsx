@@ -93,7 +93,7 @@ export default function WeakPasswordsListScreen() {
           <View style={{ width: 36 }} />
         </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <MaterialIcons name="hourglass-empty" size={64} color="#EF4444" />
+          <MaterialIcons name="hourglass-empty" size={64} color="#F59E0B" />
           <ThemedText style={{ marginTop: 16, color: '#666' }}>Loading...</ThemedText>
         </View>
       </ThemedView>
@@ -120,7 +120,7 @@ export default function WeakPasswordsListScreen() {
         ) : (
           <>
             <View style={styles.warningBanner}>
-              <MaterialIcons name="warning" size={24} color="#EF4444" />
+              <MaterialIcons name="warning" size={24} color="#F59E0B" />
               <View style={styles.warningTextContainer}>
                 <ThemedText style={styles.warningTitle}>Action Required</ThemedText>
                 <ThemedText style={styles.warningDescription}>
@@ -152,7 +152,7 @@ export default function WeakPasswordsListScreen() {
                 </View>
                 <View style={styles.cardFooter}>
                   <View style={styles.strengthBadge}>
-                    <MaterialIcons name="warning" size={16} color="#EF4444" />
+                    <MaterialIcons name="warning" size={16} color="#F59E0B" />
                     <ThemedText style={styles.strengthText}>Weak</ThemedText>
                   </View>
                   <ThemedText style={styles.dateText}>{formatDate(pwd.foundDate)}</ThemedText>
@@ -183,14 +183,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#EF4444',
+    color: '#F59E0B',
   },
   content: {
     padding: 16,
   },
   warningBanner: {
     flexDirection: 'row',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#FEF3C7',
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
@@ -202,12 +202,12 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#EF4444',
+    color: '#F59E0B',
     marginBottom: 4,
   },
   warningDescription: {
     fontSize: 14,
-    color: '#991B1B',
+    color: '#D97706',
   },
   emptyState: {
     flex: 1,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     borderLeftWidth: 4,
-    borderLeftColor: '#EF4444',
+    borderLeftColor: '#F59E0B',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   strengthBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#FEF3C7',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   strengthText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#EF4444',
+    color: '#F59E0B',
   },
   dateText: {
     fontSize: 12,

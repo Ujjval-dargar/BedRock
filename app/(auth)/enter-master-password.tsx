@@ -205,15 +205,15 @@ export default function LoginMasterPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'height' : 'height'}
-        style={styles.keyboardView}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardView}
         >
           <View style={styles.content}>
             {/* Title */}
@@ -289,8 +289,8 @@ export default function LoginMasterPasswordScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -301,16 +301,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   keyboardView: {
-    flex: 1,
+    width: '100%',
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    minHeight: '100%',
   },
   content: {
+    flex: 1,
+    justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingVertical: 40,
   },
   title: {
     fontSize: 32,

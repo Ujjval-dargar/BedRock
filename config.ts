@@ -8,5 +8,5 @@ export const API_CONFIG = {
   // Your Mac's IP address (found via: ifconfig | grep "inet ")
   // BASE_URL: 'http://192.168.44.131:8000',
   //  BASE_URL: 'https://names-revelation-charged-tin.trycloudflare.com',
-  BASE_URL: 'http://192.168.29.231:8000',
+  BASE_URL: 'https://bedrocks.dev',
 };

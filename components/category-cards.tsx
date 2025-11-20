@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
+import { router } from 'expo-router';
 import { passwordAPI } from '../utils/api';
 
 interface CategoryCard {
@@ -135,6 +136,13 @@ export function CategoryCards() {
     );
   }
 
+  const handleCategoryPress = (categoryTitle: string) => {
+    router.push({
+      pathname: '/(tabs)/vault',
+      params: { filter: categoryTitle }
+    } as any);
+  };
+
   return (
     <ScrollView
       horizontal
@@ -142,9 +150,11 @@ export function CategoryCards() {
       contentContainerStyle={styles.container}
     >
       {categories.map((category, index) => (
-        <View
+        <TouchableOpacity
           key={index}
           style={[styles.card, { backgroundColor: category.backgroundColor }]}
+          onPress={() => handleCategoryPress(category.title)}
+          activeOpacity={0.7}
         >
           <View style={styles.iconWrapper}>
             {category.secondaryIcon ? (
@@ -162,7 +172,7 @@ export function CategoryCards() {
             <Text style={styles.title}>{category.title}</Text>
             <Text style={styles.count}>{category.count}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       ))}
     </ScrollView>
   );

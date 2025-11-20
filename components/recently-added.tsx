@@ -103,23 +103,42 @@ export function RecentlyAdded() {
         const { width: screenW, height: screenH } = Dimensions.get('window');
         const menuWidth = 140;
         const menuHeight = 120;
+        const bottomNavHeight = 90; // Height of bottom navigation bar
+        const buttonBottom = top + height;
+        const menuBottom = buttonBottom + 8 + menuHeight; // Where menu would end if positioned below
 
-        // Prefer showing menu below the button
-        let xPos = left + width - menuWidth;
-        let yPos = top + height + 8;
+        let xPos: number;
+        let yPos: number;
 
-        // Keep menu inside horizontal bounds
-        if (xPos < 8) {
-          // try aligning left edge with the button
-          xPos = left;
-        }
-        if (xPos + menuWidth > screenW - 8) {
-          xPos = Math.max(8, screenW - menuWidth - 8);
-        }
+        // Check if menu would actually overlap with nav bar (only trigger special positioning if needed)
+        if (menuBottom > screenH - bottomNavHeight) {
+          // Position menu to the LEFT of the button, aligned with button's right edge at top
+          xPos = left + width - menuWidth; // Align menu's right edge with button's right edge
+          yPos = top + height + 4; // Just below the button
+          
+          // If menu would overlap with nav bar even at this position, move it up
+          if (yPos + menuHeight > screenH - bottomNavHeight) {
+            yPos = screenH - bottomNavHeight - menuHeight - 4;
+          }
+          
+          // Keep menu in bounds
+          if (xPos < 8) xPos = 8;
+          if (yPos < 8) yPos = 8;
+        } else {
+          // Standard positioning: below button, aligned to right
+          xPos = left + width - menuWidth;
+          yPos = top + height + 8;
 
-        // If not enough space below, show above
-        if (yPos + menuHeight > screenH - 16) {
-          yPos = Math.max(8, top - menuHeight - 8);
+          // Keep menu inside horizontal bounds
+          if (xPos < 8) xPos = left;
+          if (xPos + menuWidth > screenW - 8) {
+            xPos = Math.max(8, screenW - menuWidth - 8);
+          }
+
+          // If not enough space below, show above
+          if (yPos + menuHeight > screenH - bottomNavHeight - 8) {
+            yPos = Math.max(8, top - menuHeight - 8);
+          }
         }
 
         setMenuPosition({ x: xPos, y: yPos });

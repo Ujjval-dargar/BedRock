@@ -1,5 +1,5 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -144,6 +144,7 @@ const StatCard = ({ icon, value, label, color }: { icon: string; value: string; 
 
 export default function VaultScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -155,6 +156,27 @@ export default function VaultScreen() {
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const buttonRefs = useRef<{ [key: number]: any }>({});
   const rootRef = useRef<any>(null);
+  const categoryScrollRef = useRef<any>(null);
+
+  // Handle filter parameter from category cards
+  useEffect(() => {
+    if (params.filter && typeof params.filter === 'string') {
+      setSelectedCategory(params.filter);
+      // Scroll to the selected category
+      setTimeout(() => {
+        const categoryIndex = categories.indexOf(params.filter as string);
+        if (categoryIndex !== -1 && categoryScrollRef.current) {
+          // Scroll to make the selected category visible
+          categoryScrollRef.current.scrollTo({
+            x: Math.max(0, (categoryIndex - 1) * 90), // Adjust position to center the category
+            animated: true
+          });
+        }
+      }, 100);
+      // Clear the filter parameter after applying it
+      router.setParams({ filter: undefined } as any);
+    }
+  }, [params.filter, router]);
 
   // Fetch passwords from backend
   const fetchPasswords = async () => {
@@ -249,21 +271,39 @@ export default function VaultScreen() {
         const { height: screenH, width: screenW } = Dimensions.get('window');
         const menuWidth = 140;
         const menuHeight = 120;
+        const bottomNavHeight = 90; // Height of bottom navigation bar
+        const buttonBottom = top + height;
+        const menuBottom = buttonBottom + 4 + menuHeight; // Where menu would end if positioned below
 
-        // Position menu BELOW the button and aligned to the RIGHT
-        let xPos = left + width - menuWidth;  // Align menu's right edge with button's right edge
-        let yPos = top + height + 4;  // Position below the button
+        let xPos: number;
+        let yPos: number;
 
-        // Make sure menu doesn't go off screen to the left
-        if (xPos < 8) {
-          xPos = 8;
-        }
+        // Check if menu would actually overlap with nav bar (only trigger special positioning if needed)
+        if (menuBottom > screenH - bottomNavHeight) {
+          // Position menu aligned with button's right edge, just above nav bar
+          xPos = left + width - menuWidth; // Align menu's right edge with button's right edge
+          yPos = top + height + 4; // Just below the button
+          
+          // If menu would overlap with nav bar even at this position, move it up
+          if (yPos + menuHeight > screenH - bottomNavHeight) {
+            yPos = screenH - bottomNavHeight - menuHeight - 4;
+          }
+          
+          // Keep menu in bounds
+          if (xPos < 8) xPos = 8;
+          if (yPos < 8) yPos = 8;
+        } else {
+          // Standard positioning: below button, aligned to right
+          xPos = left + width - menuWidth;
+          yPos = top + height + 4;
 
-        // Only show above if there's really not enough space (account for bottom nav)
-        const bottomSafeZone = 100; // Account for bottom navigation
-        if (yPos + menuHeight > screenH - bottomSafeZone) {
-          // Still not enough space, just position it as low as possible
-          yPos = Math.min(top + height + 4, screenH - menuHeight - bottomSafeZone);
+          // Make sure menu doesn't go off screen to the left
+          if (xPos < 8) xPos = 8;
+
+          // If not enough space below, show above
+          if (yPos + menuHeight > screenH - bottomNavHeight - 8) {
+            yPos = Math.max(8, top - menuHeight - 8);
+          }
         }
 
         setMenuPosition({ x: xPos, y: yPos });
@@ -361,6 +401,7 @@ export default function VaultScreen() {
 
         {/* Category Filter */}
         <ScrollView
+          ref={categoryScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesContainer}

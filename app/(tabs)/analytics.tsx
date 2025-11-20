@@ -51,21 +51,57 @@ const PASSWORD_COLORS = {
 };
 
 // Donut Chart Component
-const DonutChart = ({ score = 68 }: { score?: number }) => {
+const DonutChart = ({ 
+  score = 68, 
+  safe = 0, 
+  weak = 0, 
+  leaked = 0, 
+  duplicate = 0 
+}: { 
+  score?: number;
+  safe?: number;
+  weak?: number;
+  leaked?: number;
+  duplicate?: number;
+}) => {
   const size = 200;
   const strokeWidth = 20;
   const radius = (size - strokeWidth) / 2;
   const center = size / 2;
 
-  // Data for segments with consistent colors
+  // Data for segments with consistent colors - using actual counts
   const segments = [
-    { value: 44, color: PASSWORD_COLORS.safe.primary, label: 'Safe' },
-    { value: 44, color: PASSWORD_COLORS.weak.primary, label: 'Weak' },
-    { value: 12, color: PASSWORD_COLORS.leaked.primary, label: 'Leaked' },
-    { value: 44, color: PASSWORD_COLORS.duplicate.primary, label: 'Duplicate' },
-  ];
+    { value: safe, color: PASSWORD_COLORS.safe.primary, label: 'Safe' },
+    { value: weak, color: PASSWORD_COLORS.weak.primary, label: 'Weak' },
+    { value: leaked, color: PASSWORD_COLORS.leaked.primary, label: 'Leaked' },
+    { value: duplicate, color: PASSWORD_COLORS.duplicate.primary, label: 'Duplicate' },
+  ].filter(segment => segment.value > 0); // Only show segments with values
 
   const total = segments.reduce((sum, seg) => sum + seg.value, 0);
+  
+  // If no passwords, show a placeholder circle
+  if (total === 0) {
+    return (
+      <View style={styles.chartContainer}>
+        <View style={styles.chartWrapper}>
+          <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+            <Path
+              d={createArcPath(center, center, radius, -90, 270)}
+              stroke="#E5E7EB"
+              strokeWidth={strokeWidth}
+              fill="transparent"
+              strokeLinecap="round"
+            />
+          </Svg>
+          <View style={styles.chartCenter}>
+            <Text style={styles.scoreText}>0</Text>
+            <Text style={styles.scoreLabel}>No Data</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   let currentAngle = -90; // Start from top
 
   return (
@@ -176,7 +212,6 @@ export default function AnalyticsScreen() {
         return;
       }
 
-      const decryptedPasswords: string[] = [];
       const passwordCounts: { [key: string]: number } = {};
       let weakCount = 0;
       let safeCount = 0;
@@ -185,7 +220,6 @@ export default function AnalyticsScreen() {
       for (const pwd of passwords) {
         try {
           const decrypted = await aesDecrypt(pwd.encrypted_password, vaultKey);
-          decryptedPasswords.push(decrypted);
           
           // Count duplicates
           passwordCounts[decrypted] = (passwordCounts[decrypted] || 0) + 1;
@@ -202,13 +236,18 @@ export default function AnalyticsScreen() {
         }
       }
 
-      // Count duplicates
-      const duplicateCount = Object.values(passwordCounts).filter(count => count > 1).length;
+      // Count duplicate passwords (passwords that appear more than once)
+      let duplicateCount = 0;
+      Object.values(passwordCounts).forEach(count => {
+        if (count > 1) {
+          duplicateCount += count; // Count all instances of duplicated passwords
+        }
+      });
 
       setPasswordStats({
         safe: safeCount,
         weak: weakCount,
-        leaked: 0, // Would need a breach API to check this
+        leaked: 0, // This will be updated when leaked passwords screen is opened
         duplicate: duplicateCount,
         total: passwords.length,
       });
@@ -251,7 +290,13 @@ export default function AnalyticsScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}>
         {/* Chart Card */}
         <View style={styles.chartCard}>
-          <DonutChart score={score} />
+          <DonutChart 
+            score={score} 
+            safe={passwordStats.safe}
+            weak={passwordStats.weak}
+            leaked={passwordStats.leaked}
+            duplicate={passwordStats.duplicate}
+          />
         </View>
 
         {/* Category Cards */}
