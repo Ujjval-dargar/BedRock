@@ -219,9 +219,18 @@ async def complete_tutorial(current: models.User = Depends(auth.get_current_user
 
 # Biometric endpoints
 @app.post("/biometric/enable")
-async def enable_biometric(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
-    """Enable biometric authentication for the current user"""
+async def enable_biometric(
+    request: schemas.BiometricEnableRequest,
+    current: models.User = Depends(auth.get_current_user), 
+    db: AsyncSession = Depends(get_session)
+):
+    """Enable biometric authentication for the current user on this device
+    
+    SECURITY: Stores device ID to bind biometric to specific device.
+    This prevents another user from using their biometric with this account.
+    """
     current.biometric_enabled = True
+    current.biometric_device_id = request.device_id
     db.add(current)
     await db.commit()
     return {"message": "Biometric authentication enabled", "biometric_enabled": True}
@@ -231,6 +240,7 @@ async def enable_biometric(current: models.User = Depends(auth.get_current_user)
 async def disable_biometric(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
     """Disable biometric authentication for the current user"""
     current.biometric_enabled = False
+    current.biometric_device_id = None
     db.add(current)
     await db.commit()
     return {"message": "Biometric authentication disabled", "biometric_enabled": False}
@@ -303,14 +313,18 @@ async def biometric_login(
     """Login using biometric authentication
     
     This endpoint is called AFTER successful device biometric verification.
-    It verifies that biometric is enabled for the account and returns
-    a login token and necessary cryptographic data WITHOUT password verification.
     
-    SECURITY: This is safe because:
+    SECURITY MEASURES:
     1. User must have passed device-level biometric authentication (fingerprint/face)
     2. Biometric must be explicitly enabled for this account in the database
-    3. Device biometric is as secure as password authentication
-    4. Same login flow as regular password login, just different authentication method
+    3. Device ID must match the device where biometric was originally enabled
+    4. This prevents cross-device and cross-user biometric attacks
+    
+    ATTACK PREVENTION:
+    - Without device ID check: User A enables biometric on Device 1, User B uses 
+      their finger on Device 1 with User A's email → BLOCKED by device ID check
+    - With device ID check: Only the specific device where biometric was enabled
+      can use biometric login for that account
     """
     # Find user by email
     user = await crud.get_user_by_email(db, request.email.lower())
@@ -325,7 +339,20 @@ async def biometric_login(
             detail="Biometric authentication is not enabled for this account"
         )
     
-    # Create access token (same as regular login)
+    # CRITICAL SECURITY CHECK: Verify device ID matches
+    if not request.device_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Device ID is required for biometric authentication"
+        )
+    
+    if user.biometric_device_id != request.device_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Biometric authentication is not enabled on this device. Please use your master password or enable biometric on this device."
+        )
+    
+    # All security checks passed - create access token
     access_token = auth.create_access_token({"sub": str(user.id)})
     
     # Return same response as regular login

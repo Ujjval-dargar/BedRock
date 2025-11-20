@@ -1,50 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import {
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
-type SecurityOption = {
-  id: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-  accentColor: string;
-  accentBackground: string;
-  route?: string;
-};
-
-const securityOptions: SecurityOption[] = [
-  {
-    id: 'change-master-password',
-    icon: 'key',
-    title: 'Change Master Password',
-    subtitle: 'Update your master password',
-    accentColor: '#6F6BF5',
-    accentBackground: '#F5F0FF',
-    route: '/(security)/change-master-password',
-  },
-];
-
 export default function AccountSecurityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-
-  const handleOptionPress = (option: SecurityOption) => {
-    if (option.route) {
-      router.push(option.route as any);
-    } else {
-      Alert.alert('Coming Soon', `${option.title} will be available soon.`);
-    }
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
@@ -64,38 +32,41 @@ export default function AccountSecurityScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Info Card */}
-        <View style={styles.infoCard}>
-          <View style={styles.infoIconContainer}>
-            <Ionicons name="shield-checkmark" size={24} color="#6F6BF5" />
+        {/* Master Password Security Info Card */}
+        <View style={styles.securityCard}>
+          <View style={styles.securityIconContainer}>
+            <Ionicons name="shield-checkmark" size={32} color="#6F6BF5" />
           </View>
-          <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>Keep Your Account Secure</Text>
-            <Text style={styles.infoText}>
-              Manage your security settings, recovery options, and privacy preferences.
+          <Text style={styles.securityTitle}>Your Master Password Security</Text>
+          <Text style={styles.securityText}>
+            BedRock uses zero-knowledge encryption. We do not store your master password anywhere — not on our servers, not on your device.
+          </Text>
+          <Text style={styles.securityText}>
+            This means that if you forget your master password, there is no way to recover your vault. Your encrypted data cannot be decrypted without it.
+          </Text>
+          <View style={styles.featureCard}>
+            <Ionicons name="lock-closed" size={20} color="#059669" />
+            <Text style={styles.featureText}>
+              This is a security feature, not a limitation. Your passwords are truly private and secure.
             </Text>
           </View>
         </View>
 
-        {/* Security Options */}
-        <View style={styles.optionsContainer}>
-          {securityOptions.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              style={styles.optionCard}
-              activeOpacity={0.7}
-              onPress={() => handleOptionPress(option)}
-            >
-              <View style={[styles.optionIconContainer, { backgroundColor: option.accentBackground }]}>
-                <Ionicons name={option.icon} size={24} color={option.accentColor} />
-              </View>
-              <View style={styles.optionContent}>
-                <Text style={styles.optionTitle}>{option.title}</Text>
-                <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          ))}
+        {/* Info Tips Card */}
+        <View style={styles.tipsCard}>
+          <Text style={styles.tipsTitle}>Important Tips</Text>
+          <View style={styles.tipItem}>
+            <View style={styles.tipBullet} />
+            <Text style={styles.tipText}>Remember your master password — write it down and store it securely offline.</Text>
+          </View>
+          <View style={styles.tipItem}>
+            <View style={styles.tipBullet} />
+            <Text style={styles.tipText}>Use a strong, unique master password that you don't use anywhere else.</Text>
+          </View>
+          <View style={styles.tipItem}>
+            <View style={styles.tipBullet} />
+            <Text style={styles.tipText}>If you forget it, you will need to create a new account and re-add your passwords.</Text>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -103,10 +74,6 @@ export default function AccountSecurityScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -136,70 +103,86 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
   },
-  infoCard: {
-    flexDirection: 'row',
-    backgroundColor: '#EEF2FF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    gap: 12,
-  },
-  infoIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E40AF',
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#3B82F6',
-    lineHeight: 20,
-  },
-  optionsContainer: {
-    gap: 12,
-  },
-  optionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  securityCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
-    gap: 12,
+    padding: 24,
+    marginBottom: 16,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
-  optionIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  securityIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F5F0FF',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 16,
   },
-  optionContent: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  securityTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 12,
+    textAlign: 'center',
   },
-  optionSubtitle: {
+  securityText: {
+    fontSize: 15,
+    color: '#374151',
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  featureCard: {
+    flexDirection: 'row',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 8,
+    alignItems: 'center',
+    gap: 10,
+  },
+  featureText: {
+    flex: 1,
     fontSize: 14,
-    color: '#6B7280',
+    color: '#059669',
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  tipsCard: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#D97706',
+    marginBottom: 16,
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    gap: 10,
+  },
+  tipBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F59E0B',
+    marginTop: 7,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#92400E',
+    lineHeight: 20,
   },
 });

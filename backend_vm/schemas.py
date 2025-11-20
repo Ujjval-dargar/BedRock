@@ -37,6 +37,11 @@ class LoginIn(BaseModel):
 
 class BiometricLoginRequest(BaseModel):
     email: EmailStr
+    device_id: Optional[str] = None
+
+
+class BiometricEnableRequest(BaseModel):
+    device_id: str
 
 
 class UsernameCheckIn(BaseModel):

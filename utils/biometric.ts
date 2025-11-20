@@ -2,6 +2,38 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { authAPI } from './api';
+import * as Application from 'expo-application';
+
+/**
+ * Get unique device identifier
+ */
+export async function getDeviceId(): Promise<string> {
+  try {
+    // Use platform-specific device identifiers
+    let deviceId: string;
+    
+    if (Platform.OS === 'android') {
+      const androidId = Application.getAndroidId();
+      deviceId = `android_${androidId}`;
+    } else if (Platform.OS === 'ios') {
+      const installId = await Application.getIosIdForVendorAsync();
+      deviceId = `ios_${installId || 'unknown'}`;
+    } else {
+      // Fallback for web or other platforms
+      deviceId = `${Platform.OS}_unknown`;
+    }
+    
+    return deviceId;
+  } catch (error) {
+    // Fallback to a stored UUID
+    let storedId = await AsyncStorage.getItem('device_uuid');
+    if (!storedId) {
+      storedId = `${Platform.OS}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await AsyncStorage.setItem('device_uuid', storedId);
+    }
+    return storedId;
+  }
+}
 
 /**
  * Check if device supports biometric authentication
@@ -70,6 +102,7 @@ export async function isBiometricLoginEnabled(email?: string): Promise<boolean> 
  * Authenticate using biometric and login directly
  * This function prompts for biometric authentication and if successful,
  * calls the backend to login directly without password
+ * SECURITY: Includes device ID to prevent cross-device biometric attacks
  */
 export async function authenticateWithBiometric(email: string): Promise<{
   success: boolean;
@@ -77,9 +110,11 @@ export async function authenticateWithBiometric(email: string): Promise<{
 }> {
   try {
     if (!email) {
-      console.log('⚠️ No email provided for biometric authentication');
       return { success: false };
     }
+
+    // Get device ID BEFORE prompting for biometric
+    const deviceId = await getDeviceId();
 
     // First authenticate with device biometric
     const result = await LocalAuthentication.authenticateAsync({
@@ -90,9 +125,8 @@ export async function authenticateWithBiometric(email: string): Promise<{
     });
 
     if (result.success) {
-      // Device biometric passed, now login directly via backend
-      console.log('✅ Device biometric passed, logging in...');
-      const response = await authAPI.biometricLogin(email);
+      // Device biometric passed, now login with device ID verification
+      const response = await authAPI.biometricLogin(email, deviceId);
       
       return {
         success: true,
@@ -102,15 +136,15 @@ export async function authenticateWithBiometric(email: string): Promise<{
 
     return { success: false };
   } catch (error: any) {
-    console.error('Biometric authentication error:', error);
-    throw error; // Re-throw to handle specific errors in caller
+    // Don't log errors - they will be handled by the caller with user-friendly alerts
+    throw error;
   }
 }
 
 /**
  * Enable biometric login for current user
  * Verifies master password with backend before enabling
- * No password storage needed - backend handles biometric login directly
+ * SECURITY: Stores device ID to bind biometric to this specific device
  */
 export async function enableBiometricLogin(
   userId: string,
@@ -119,15 +153,14 @@ export async function enableBiometricLogin(
 ): Promise<boolean> {
   try {
     // First, verify the master password with the backend
-    console.log('🔐 Verifying master password with backend...');
     const verification = await authAPI.verifyMasterPassword(email, masterPassword);
     
     if (!verification.valid) {
-      console.log('❌ Invalid master password');
       throw new Error('Invalid master password');
     }
 
-    console.log('✅ Master password verified');
+    // Get device ID
+    const deviceId = await getDeviceId();
 
     // Then, authenticate with biometric to confirm user intent
     const result = await LocalAuthentication.authenticateAsync({
@@ -137,17 +170,13 @@ export async function enableBiometricLogin(
     });
 
     if (result.success) {
-      // Enable biometric in backend database
-      // No local storage needed - backend will handle biometric login
-      await authAPI.enableBiometric();
-      
-      console.log(`✅ Biometric login enabled for user: ${email}`);
+      // Enable biometric in backend database with device ID
+      await authAPI.enableBiometric(deviceId);
       return true;
     }
 
     return false;
   } catch (error) {
-    console.error('Error enabling biometric login:', error);
     return false;
   }
 }
@@ -160,10 +189,8 @@ export async function disableBiometricLogin(): Promise<void> {
   try {
     // Disable biometric in backend database
     await authAPI.disableBiometric();
-    
-    console.log('✅ Biometric login disabled');
   } catch (error) {
-    console.error('Error disabling biometric login:', error);
+    // Silently fail - error will be handled by caller if needed
   }
 }
 
@@ -175,7 +202,6 @@ export async function getSavedBiometricEmail(): Promise<string | null> {
   try {
     return await AsyncStorage.getItem('user_email');
   } catch (error) {
-    console.error('Error getting saved biometric email:', error);
     return null;
   }
 }
@@ -192,7 +218,6 @@ export async function isBiometricForDifferentAccount(currentEmail: string): Prom
     // No need to check for different accounts
     return false;
   } catch (error) {
-    console.error('Error checking biometric account:', error);
     return false;
   }
 }

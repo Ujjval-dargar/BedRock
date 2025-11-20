@@ -19,6 +19,8 @@ class User(Base):
     encrypted_private_key = Column(LargeBinary, nullable=False)
     # Biometric authentication enabled flag
     biometric_enabled = Column(Boolean, default=False, nullable=False)
+    # Device ID for biometric authentication (binds biometric to specific device)
+    biometric_device_id = Column(String(200), nullable=True)
     # First login flag (True = show tutorial, False = skip tutorial)
     is_first_login = Column(Boolean, default=True, nullable=False)
 

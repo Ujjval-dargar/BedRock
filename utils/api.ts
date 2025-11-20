@@ -97,7 +97,10 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(error.detail || `HTTP ${response.status}`);
+      const errorMessage = typeof error.detail === 'string' 
+        ? error.detail 
+        : JSON.stringify(error.detail || error.message || `HTTP ${response.status}`);
+      throw new Error(errorMessage);
     }
 
     return response.json();
@@ -200,7 +203,7 @@ export const authAPI = {
     return response;
   },
 
-  async biometricLogin(email: string): Promise<{
+  async biometricLogin(email: string, deviceId: string): Promise<{
     access_token: string;
     encrypted_vault_key: string;
     vault_salt: string;
@@ -211,7 +214,7 @@ export const authAPI = {
     const normalizedEmail = email.toLowerCase();
     const response = await fetchAPI('/biometric/login', {
       method: 'POST',
-      body: JSON.stringify({ email: normalizedEmail }),
+      body: JSON.stringify({ email: normalizedEmail, device_id: deviceId }),
     });
 
     // Store auth token and user data (same as regular login)
@@ -295,9 +298,10 @@ export const authAPI = {
     return response;
   },
 
-  async enableBiometric(): Promise<{ message: string; biometric_enabled: boolean }> {
+  async enableBiometric(deviceId: string): Promise<{ message: string; biometric_enabled: boolean }> {
     return await fetchAPI('/biometric/enable', {
       method: 'POST',
+      body: JSON.stringify({ device_id: deviceId }),
     });
   },
 

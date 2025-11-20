@@ -23,6 +23,7 @@
     "buffer": "^6.0.3",
     "crypto-js": "^4.2.0",
     "expo": "~54.0.25",
+    "expo-application": "~7.0.7",
     "expo-clipboard": "^8.0.7",
     "expo-constants": "~18.0.10",
     "expo-crypto": "^15.0.7",

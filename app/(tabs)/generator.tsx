@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   ScrollView,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 // Slider's bundled types conflict in this workspace; import as `any` to avoid TS errors.
@@ -104,6 +105,11 @@ export default function GeneratorScreen(): React.ReactElement {
 
   return (
     <SAView style={styles.safe} edges={["top"]}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={0}
+      >
       <View style={styles.header}>
         <View style={{ width: 36 }} />
         <Text style={styles.headerTitle}>Password Generator</Text>
@@ -114,6 +120,7 @@ export default function GeneratorScreen(): React.ReactElement {
         style={styles.content}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Generated Password Display */}
         <View style={styles.passwordCard}>
@@ -244,6 +251,7 @@ export default function GeneratorScreen(): React.ReactElement {
           </View>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SAView>
   );
 }
@@ -279,16 +287,16 @@ function OptionRow({ icon, label, value, onValueChange, color }: OptionRowProps)
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#F2F6FB",
+    backgroundColor: "#FFFFFF",
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: "#F3F4F6",
   },
   headerTitle: {
     fontSize: 20,
@@ -303,15 +311,17 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   passwordCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   passwordHeader: {
     flexDirection: "row",
@@ -335,7 +345,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: "#6B5BFF",
+    borderColor: "#6F6BF5",
   },
   passwordText: {
     fontSize: 16,
@@ -385,13 +395,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#6B5BFF",
+    backgroundColor: "#6F6BF5",
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 14,
-    shadowColor: "#6B5BFF",
+    shadowColor: "#6F6BF5",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -406,33 +416,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: "#6B5BFF",
+    borderColor: "#6F6BF5",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
   },
   useButtonText: {
-    color: "#6B5BFF",
+    color: "#6F6BF5",
     fontSize: 15,
     fontWeight: "700",
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   settingHeader: {
     flexDirection: "row",
@@ -446,7 +458,7 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   lengthBadge: {
-    backgroundColor: "#6B5BFF",
+    backgroundColor: "#6F6BF5",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,

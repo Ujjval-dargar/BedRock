@@ -16,6 +16,8 @@ import {
   UIManager,
   Dimensions,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { passwordAPI, PasswordEntry, storageAPI } from '../../utils/api';
@@ -353,6 +355,11 @@ export default function VaultScreen() {
 
   return (
     <SAView style={styles.safe} edges={['top']} ref={rootRef}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={0}
+      >
       <View style={styles.header}>
         <View style={{ width: 36 }} />
         <Text style={styles.headerTitle}>My Vault</Text>
@@ -363,6 +370,7 @@ export default function VaultScreen() {
         style={styles.content}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Loading State */}
         {isLoading && (
@@ -489,6 +497,7 @@ export default function VaultScreen() {
           </>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <ActionMenu
         visible={menuVisible}
@@ -504,16 +513,16 @@ export default function VaultScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F2F6FB',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#F3F4F6',
   },
   headerTitle: {
     fontSize: 20,
@@ -537,15 +546,17 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   statIcon: {
     width: 48,
@@ -569,15 +580,17 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingHorizontal: 12,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   searchIcon: {
     marginRight: 8,
@@ -597,13 +610,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#fff',
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
   },
   categoryChipActive: {
-    backgroundColor: '#6B5BFF',
-    borderColor: '#6B5BFF',
+    backgroundColor: '#6F6BF5',
+    borderColor: '#6F6BF5',
   },
   categoryChipText: {
     fontSize: 14,
@@ -620,14 +633,16 @@ const styles = StyleSheet.create({
   quickActionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   quickActionIcon: {
     width: 44,
@@ -663,15 +678,17 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 14,
+    padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   cardIconContainer: {
     width: 50,

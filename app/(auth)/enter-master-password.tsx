@@ -178,14 +178,27 @@ export default function LoginMasterPasswordScreen() {
       // Navigate to home screen
       router.replace('/(tabs)/home' as any);
     } catch (error: any) {
-      // Check if error is due to biometric not being enabled
-      if (error.message?.includes('not enabled')) {
+      // Check for specific error messages
+      const errorMessage = error.message || '';
+      
+      if (errorMessage.includes('not enabled on this device')) {
         Alert.alert(
-          'Biometric Disabled', 
-          'Biometric authentication is not enabled for this account. Please enable it in Settings after logging in.'
+          'Device Not Authorized',
+          'Biometric authentication is not enabled on this device. Please use your master password to login, then enable biometric in Settings.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      } else if (errorMessage.includes('not enabled')) {
+        Alert.alert(
+          'Biometric Not Enabled', 
+          'Biometric authentication is not enabled for this account. Please login with your master password and enable it in Settings.',
+          [{ text: 'OK', style: 'default' }]
         );
       } else {
-        Alert.alert('Error', 'Biometric authentication failed');
+        Alert.alert(
+          'Authentication Failed', 
+          'Biometric authentication failed. Please try again or use your master password.',
+          [{ text: 'OK', style: 'default' }]
+        );
       }
     } finally {
       setIsLoading(false);
@@ -194,15 +207,16 @@ export default function LoginMasterPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+        keyboardVerticalOffset={0}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.keyboardView}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
           <View style={styles.content}>
             {/* Title */}
@@ -271,8 +285,8 @@ export default function LoginMasterPasswordScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
