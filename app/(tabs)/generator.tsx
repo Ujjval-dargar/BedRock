@@ -10,7 +10,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 // Slider's bundled types conflict in this workspace; import as `any` to avoid TS errors.
 const Slider: any = (require('@react-native-community/slider') as any).default ?? require('@react-native-community/slider');
 import * as Clipboard from "expo-clipboard";
@@ -20,6 +20,7 @@ import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 export default function GeneratorScreen(): React.ReactElement {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [password, setPassword] = useState<string>("");
   const [length, setLength] = useState<number>(16);
@@ -111,7 +112,7 @@ export default function GeneratorScreen(): React.ReactElement {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Generated Password Display */}
@@ -300,7 +301,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 80,
   },
   passwordCard: {
     backgroundColor: "#fff",

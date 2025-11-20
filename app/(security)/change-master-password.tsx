@@ -12,12 +12,14 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../utils/api';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 export default function ChangeMasterPasswordScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -126,7 +128,7 @@ export default function ChangeMasterPasswordScreen() {
       >
         <ScrollView
           style={styles.content}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Warning Card */}
@@ -294,7 +296,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
   },
   warningCard: {
     flexDirection: 'row',

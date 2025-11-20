@@ -1,13 +1,16 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 export default function WelcomeScreen() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Illustration Section */}
@@ -56,7 +59,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 40,
   },
   illustrationContainer: {
     alignItems: 'center',

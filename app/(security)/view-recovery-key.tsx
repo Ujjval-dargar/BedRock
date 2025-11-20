@@ -8,13 +8,16 @@ import {
   View,
   Alert,
   TextInput,
+  ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 export default function ViewRecoveryKeyScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [masterPassword, setMasterPassword] = useState('');
@@ -81,7 +84,11 @@ export default function ViewRecoveryKeyScreen() {
         </View>
       </SafeAreaView>
 
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.content, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Loading...</Text>
@@ -124,39 +131,11 @@ export default function ViewRecoveryKeyScreen() {
                     We cannot retrieve your original recovery key
                   </Text>
                 </View>
-                <View style={styles.bulletItem}>
-                  <View style={styles.bullet} />
-                  <Text style={styles.bulletText}>
-                    Contact support if you need account recovery assistance
-                  </Text>
-                </View>
               </View>
-            </View>
-
-            {/* Alternative Options */}
-            <View style={styles.alternativesCard}>
-              <Text style={styles.alternativesTitle}>Need Help?</Text>
-              <Text style={styles.alternativesText}>
-                If you've lost access to your account and don't have your recovery key, please contact our support team for assistance with account recovery options.
-              </Text>
-              
-              <TouchableOpacity
-                style={styles.supportButton}
-                onPress={() => {
-                  Alert.alert(
-                    'Contact Support',
-                    'Please email us at support@bedrock.com for account recovery assistance.',
-                    [{ text: 'OK' }]
-                  );
-                }}
-              >
-                <Ionicons name="mail" size={20} color="#6F6BF5" />
-                <Text style={styles.supportButtonText}>Contact Support</Text>
-              </TouchableOpacity>
             </View>
           </>
         )}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -185,8 +164,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     padding: 16,
   },
   loadingContainer: {
@@ -270,38 +251,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1E40AF',
     lineHeight: 20,
-  },
-  alternativesCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  alternativesTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  alternativesText: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  supportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F5F0FF',
-    borderRadius: 12,
-    padding: 14,
-    gap: 8,
-  },
-  supportButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#6F6BF5',
   },
 });

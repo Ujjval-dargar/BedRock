@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, View, Image, Alert } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -25,6 +26,7 @@ interface PasswordGroup {
 export default function DuplicatePasswordsListScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [duplicateGroups, setDuplicateGroups] = useState<PasswordGroup[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -111,7 +113,7 @@ export default function DuplicatePasswordsListScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}>
         {duplicateGroups.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialIcons name="check-circle" size={64} color="#10B981" />
@@ -193,7 +195,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: BOTTOM_SAFE_AREA,
   },
   warningBanner: {
     flexDirection: 'row',

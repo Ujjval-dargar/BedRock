@@ -17,10 +17,11 @@ import {
   Dimensions,
   Pressable,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { passwordAPI, PasswordEntry, storageAPI } from '../../utils/api';
 import { aesDecrypt, validatePasswordStrength } from '../../utils/crypto';
 import { ActionMenu } from '@/components/action-menu';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 type PasswordItem = {
   id: number;
@@ -143,6 +144,7 @@ const StatCard = ({ icon, value, label, color }: { icon: string; value: string; 
 
 export default function VaultScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [passwordItems, setPasswordItems] = useState<PasswordItem[]>([]);
@@ -322,7 +324,7 @@ export default function VaultScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Loading State */}
@@ -489,7 +491,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 120,
   },
   statsContainer: {
     flexDirection: 'row',

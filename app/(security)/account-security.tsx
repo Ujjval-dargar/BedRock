@@ -9,7 +9,8 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 type SecurityOption = {
   id: string;
@@ -44,6 +45,7 @@ const securityOptions: SecurityOption[] = [
 
 export default function AccountSecurityScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleOptionPress = (option: SecurityOption) => {
     if (option.route) {
@@ -68,7 +70,7 @@ export default function AccountSecurityScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Info Card */}

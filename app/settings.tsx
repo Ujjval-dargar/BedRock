@@ -21,6 +21,7 @@ import { passwordAPI, storageAPI, authAPI } from '../utils/api';
 import { aesDecrypt, validatePasswordStrength } from '../utils/crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EditProfileModal } from '../components/edit-profile-modal';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 import {
   isBiometricAvailable,
   isBiometricLoginEnabled,
@@ -405,7 +406,7 @@ export default function SettingsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
       >
         {/* Profile Card */}
         <View style={styles.profileCard}>
