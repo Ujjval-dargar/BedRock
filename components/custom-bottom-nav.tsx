@@ -84,8 +84,8 @@ export default function CustomBottomNav({ onFABPress }: CustomBottomNavProps) {
   const rightItems = navItems.slice(2);
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <View style={styles.navBar}>
+    <View style={styles.container}>
+      <View style={[styles.navBar, { paddingBottom: 8 + insets.bottom }]}>
         <View style={styles.leftSection}>
           {leftItems.map((item) => {
             const active = isActive(item.route);
@@ -160,7 +160,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   navBar: {
     flexDirection: 'row',
@@ -171,16 +173,15 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: -2,
+      height: -15,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 5,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
     paddingTop: 0,
-    paddingBottom: 8,
     position: 'relative',
   },
   leftSection: {

@@ -67,17 +67,6 @@ const settingsItems: SettingsItem[] = [
     accentBackground: '#F5F0FF',
   },
   {
-    id: 'auto-fill',
-    icon: 'flash',
-    iconFamily: 'Ionicons',
-    title: 'Auto Fill',
-    subtitle: 'Fill forms & passwords automatically',
-    type: 'toggle',
-    toggleValue: true,
-    accentColor: '#10B981',
-    accentBackground: '#D1FAE5',
-  },
-  {
     id: 'biometric',
     icon: 'finger-print',
     iconFamily: 'Ionicons',
@@ -87,16 +76,6 @@ const settingsItems: SettingsItem[] = [
     toggleValue: false, // Will be updated dynamically
     accentColor: '#EC4899',
     accentBackground: '#FCE7F3',
-  },
-  {
-    id: 'backup',
-    icon: 'cloud-upload',
-    iconFamily: 'Ionicons',
-    title: 'Backup & Sync',
-    subtitle: 'Secure cloud backup enabled',
-    type: 'arrow',
-    accentColor: '#3B82F6',
-    accentBackground: '#DBEAFE',
   },
   {
     id: 'help-support',
@@ -161,7 +140,6 @@ const SettingsItemRow = ({ item, toggleValue, onToggleChange, onPress }: Setting
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [autoFillEnabled, setAutoFillEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -383,8 +361,6 @@ export default function SettingsScreen() {
       router.push('/shared-passwords-list' as any);
     } else if (itemId === 'account-security') {
       router.push('/(security)/account-security' as any);
-    } else if (itemId === 'backup') {
-      router.push('/(security)/backup-sync' as any);
     } else if (itemId === 'help-support') {
       router.push('/help-support' as any);
     }
@@ -481,18 +457,14 @@ export default function SettingsScreen() {
               <SettingsItemRow
                 item={item}
                 toggleValue={
-                  item.id === 'auto-fill' 
-                    ? autoFillEnabled 
-                    : item.id === 'notifications'
+                  item.id === 'notifications'
                     ? notificationsEnabled
                     : item.id === 'biometric'
                     ? biometricEnabled && biometricAvailable
                     : undefined
                 }
                 onToggleChange={
-                  item.id === 'auto-fill' 
-                    ? setAutoFillEnabled 
-                    : item.id === 'notifications'
+                  item.id === 'notifications'
                     ? setNotificationsEnabled
                     : item.id === 'biometric'
                     ? handleBiometricToggle

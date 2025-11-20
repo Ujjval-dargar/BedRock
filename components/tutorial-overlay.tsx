@@ -114,6 +114,9 @@ export function TutorialOverlay({
   const isLast = currentStep === tutorialSteps.length;
 
   const getBoxPosition = () => {
+    // Only add safe area padding if device has bottom insets (home indicator)
+    const navBarTotalHeight = 60 + (insets.bottom > 0 ? insets.bottom : 0) + 20; // nav height + safe area + margin
+    
     switch (step.position) {
       case 'center':
         return {
@@ -123,19 +126,19 @@ export function TutorialOverlay({
         };
       case 'bottom':
         return {
-          bottom: 100,
+          bottom: navBarTotalHeight,
           left: SCREEN_WIDTH / 2 - 150,
           width: 300,
         };
       case 'left':
         return {
-          bottom: 100,
+          bottom: navBarTotalHeight,
           left: 20,
           width: 280,
         };
       case 'l_center':
         return {
-          bottom: 130,
+          bottom: navBarTotalHeight + 30,
           left: 20,
           width: 280,
         };
@@ -156,9 +159,13 @@ export function TutorialOverlay({
     const navBarPaddingHorizontal = 4;
     const circleSize = 90;
     
-    // Calculate vertical position relative to screen bottom
-    const navBarBottom = insets.bottom;
-    const verticalCenter = navBarBottom + (navBarHeight / 2) - (circleSize / 2);
+    // Calculate vertical position consistently from bottom
+    // Nav items have paddingTop: 12, icon height ~26, marginTop on label: 4, label height ~18
+    // Visual center of nav items (icon + label) is approximately at: paddingTop + iconSize/2 = 12 + 13 = 25 from top of nav bar
+    // From bottom: safeArea + navBarPaddingBottom(8) + (navBarHeight - paddingBottom - visualCenter)
+    const navBarPaddingBottom = 8;
+    const iconAndLabelCenter = 25; // Visual center from top of nav bar
+    const itemCenterFromBottom = insets.bottom + navBarPaddingBottom + (navBarHeight - navBarPaddingBottom - iconAndLabelCenter);
 
     // Navigation bar now uses space-evenly for equal spacing
     // Left section: justifyContent: 'space-evenly', paddingRight: fabSize/2 (28)
@@ -188,17 +195,22 @@ export function TutorialOverlay({
         // Second item in left section (at 2/3 position with space-evenly)
         const vaultX = leftSectionStart + (leftItemPosition * 2);
         highlightStyle = {
-          bottom: verticalCenter-6,
-          left: vaultX-(circleSize/2)+28,
+          bottom: itemCenterFromBottom - (circleSize / 2),
+          left: vaultX - (circleSize / 2) + 28,
           width: circleSize,
           height: circleSize,
         };
         break;
       case 'fab':
-        // FAB is absolutely positioned at center
+        // FAB is absolutely positioned at center, raised above nav bar
+        // FAB positioning: top: -fabSize/2 + 8 = -28 + 8 = -20 from top of nav bar
+        // This means FAB center is at: navBarHeight - 20 - fabSize/2 = 60 - 20 - 28 = 12 from top of nav bar
+        // From bottom: safeArea + navBarPaddingBottom + (navBarHeight - paddingBottom - 12)
+        const fabVisualCenter = 12; // From top of nav bar
+        const fabCenterFromBottom = insets.bottom + navBarPaddingBottom + (navBarHeight - navBarPaddingBottom - fabVisualCenter);
         highlightStyle = {
-          bottom: navBarBottom + (navBarHeight / 2) - (circleSize / 2)+18,
-          left: fabCenter - (circleSize / 2)-4,
+          bottom: fabCenterFromBottom - (circleSize / 2)+10,
+          left: fabCenter - (circleSize / 2)-6,
           width: circleSize,
           height: circleSize,
         };
@@ -207,8 +219,8 @@ export function TutorialOverlay({
         // First item in right section (at 1/3 position with space-evenly)
         const generatorX = rightSectionStart + (fabSize / 2) + rightItemPosition;
         highlightStyle = {
-          bottom: verticalCenter-10,
-          left: generatorX - (circleSize / 2)-26,
+          bottom: itemCenterFromBottom - (circleSize / 2),
+          left: generatorX - (circleSize / 2) - 26,
           width: circleSize,
           height: circleSize,
         };
@@ -217,8 +229,8 @@ export function TutorialOverlay({
         // Second item in right section (at 2/3 position with space-evenly)
         const risksX = rightSectionStart + (fabSize / 2) + (rightItemPosition * 2);
         highlightStyle = {
-          bottom: verticalCenter-6,
-          left: risksX - (circleSize / 2)+6,
+          bottom: itemCenterFromBottom - (circleSize / 2),
+          left: risksX - (circleSize / 2) + 6,
           width: circleSize,
           height: circleSize,
         };
