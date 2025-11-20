@@ -24,7 +24,13 @@ export default function RootLayout() {
         <Stack.Screen name="authentication-key" />
         
         {/* Main App Screens */}
-        <Stack.Screen name="(tabs)" />
+        <Stack.Screen 
+          name="(tabs)" 
+          options={{ 
+            gestureEnabled: false,
+            headerShown: false 
+          }} 
+        />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="create-password" />
         <Stack.Screen name="edit-password" />

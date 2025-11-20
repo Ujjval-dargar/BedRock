@@ -239,15 +239,12 @@ export default function VaultScreen() {
 
   const handleMenuPress = (id: number) => {
     const buttonRef = buttonRefs.current[id];
-    const rootNode = rootRef.current ? findNodeHandle(rootRef.current) : null;
     const node = buttonRef ? findNodeHandle(buttonRef) : null;
-    
-    if (!node || !rootNode) return;
+    if (!node) return;
 
-    UIManager.measureLayout(
+    // Measure in window coordinates so menu renders correctly inside a Modal and above nav bars
+    UIManager.measureInWindow(
       node,
-      rootNode,
-      () => {},
       (left: number, top: number, width: number, height: number) => {
         const { height: screenH, width: screenW } = Dimensions.get('window');
         const menuWidth = 140;
@@ -698,7 +695,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   moreButton: {
-    padding: 8,
+    padding: 12,
     marginLeft: 8,
   },
   emptyState: {
