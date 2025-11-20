@@ -21,6 +21,7 @@ import { passwordAPI, storageAPI, authAPI } from '../utils/api';
 import { aesDecrypt, validatePasswordStrength } from '../utils/crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EditProfileModal } from '../components/edit-profile-modal';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 import {
   isBiometricAvailable,
   isBiometricLoginEnabled,
@@ -74,17 +75,6 @@ const settingsItems: SettingsItem[] = [
     toggleValue: true,
     accentColor: '#10B981',
     accentBackground: '#D1FAE5',
-  },
-  {
-    id: 'notifications',
-    icon: 'notifications',
-    iconFamily: 'Ionicons',
-    title: 'Notifications',
-    subtitle: 'Alerts for security & updates',
-    type: 'toggle',
-    toggleValue: false,
-    accentColor: '#F59E0B',
-    accentBackground: '#FEF3C7',
   },
   {
     id: 'biometric',
@@ -390,6 +380,10 @@ export default function SettingsScreen() {
     // Handle navigation based on itemId
     if (itemId === 'shared-passwords') {
       router.push('/shared-passwords-list' as any);
+    } else if (itemId === 'account-security') {
+      router.push('/(security)/account-security' as any);
+    } else if (itemId === 'backup') {
+      router.push('/(security)/backup-sync' as any);
     }
   };
 
@@ -414,7 +408,7 @@ export default function SettingsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
       >
         {/* Profile Card */}
         <View style={styles.profileCard}>
@@ -424,10 +418,7 @@ export default function SettingsScreen() {
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{username || 'User'}</Text>
-              <View style={styles.premiumBadge}>
-                <Ionicons name="sparkles" size={12} color="#6F6BF5" />
-                <Text style={styles.premiumText}>Premium Plan</Text>
-              </View>
+              <Text style={styles.profileEmail}>{email || 'email@example.com'}</Text>
             </View>
           </View>
           <TouchableOpacity 
@@ -688,15 +679,10 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  premiumText: {
+  profileEmail: {
     fontSize: 13,
-    color: '#6F6BF5',
-    fontWeight: '600',
+    color: '#6B7280',
+    fontWeight: '400',
   },
   editButton: {
     width: 40,

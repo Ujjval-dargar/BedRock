@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
-import { useNavigation } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -11,6 +12,7 @@ import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 // For now, this screen shows an empty state
 export default function LeakedPasswordsListScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (navigation) {
@@ -26,7 +28,7 @@ export default function LeakedPasswordsListScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}>
         <View style={styles.emptyState}>
           <MaterialIcons name="security" size={64} color="#10B981" />
           <ThemedText style={styles.emptyTitle}>No Leaked Passwords Detected</ThemedText>
@@ -61,7 +63,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
-    paddingBottom: BOTTOM_SAFE_AREA,
   },
   emptyState: {
     flex: 1,

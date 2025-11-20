@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, View, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackButton from '@/components/back-button';
 import Svg, { Path } from 'react-native-svg';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -9,6 +10,7 @@ import { ThemedView } from '@/components/themed-view';
 import { passwordAPI, storageAPI } from '@/utils/api';
 import { aesDecrypt } from '@/utils/crypto';
 import { validatePasswordStrength } from '@/utils/crypto';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 // Helper function to create arc path
 const createArcPath = (x: number, y: number, radius: number, startAngle: number, endAngle: number) => {
@@ -149,6 +151,7 @@ const CategoryCard = ({
 
 export default function AnalyticsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [passwordStats, setPasswordStats] = useState({
     safe: 0,
@@ -245,7 +248,7 @@ export default function AnalyticsScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}>
         {/* Chart Card */}
         <View style={styles.chartCard}>
           <DonutChart score={score} />
@@ -335,7 +338,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 120, // Space for bottom nav
   },
   chartCard: {
     backgroundColor: '#fff',

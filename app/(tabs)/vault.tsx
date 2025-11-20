@@ -17,10 +17,11 @@ import {
   Dimensions,
   Pressable,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { passwordAPI, PasswordEntry, storageAPI } from '../../utils/api';
 import { aesDecrypt, validatePasswordStrength } from '../../utils/crypto';
 import { ActionMenu } from '@/components/action-menu';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 type PasswordItem = {
   id: number;
@@ -143,6 +144,7 @@ const StatCard = ({ icon, value, label, color }: { icon: string; value: string; 
 
 export default function VaultScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [passwordItems, setPasswordItems] = useState<PasswordItem[]>([]);
@@ -237,15 +239,12 @@ export default function VaultScreen() {
 
   const handleMenuPress = (id: number) => {
     const buttonRef = buttonRefs.current[id];
-    const rootNode = rootRef.current ? findNodeHandle(rootRef.current) : null;
     const node = buttonRef ? findNodeHandle(buttonRef) : null;
-    
-    if (!node || !rootNode) return;
+    if (!node) return;
 
-    UIManager.measureLayout(
+    // Measure in window coordinates so menu renders correctly inside a Modal and above nav bars
+    UIManager.measureInWindow(
       node,
-      rootNode,
-      () => {},
       (left: number, top: number, width: number, height: number) => {
         const { height: screenH, width: screenW } = Dimensions.get('window');
         const menuWidth = 140;
@@ -322,7 +321,7 @@ export default function VaultScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Loading State */}
@@ -489,7 +488,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 120,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -697,7 +695,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   moreButton: {
-    padding: 8,
+    padding: 12,
     marginLeft: 8,
   },
   emptyState: {

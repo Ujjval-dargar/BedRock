@@ -93,22 +93,29 @@ export function RecentlyAdded() {
 
   const handleMenuPress = (index: number) => {
     const buttonRef = buttonRefs.current[index];
-    const rootNode = rootRef.current ? findNodeHandle(rootRef.current) : null;
     const node = buttonRef ? findNodeHandle(buttonRef) : null;
-    if (!node || !rootNode) return;
+    if (!node) return;
 
-    UIManager.measureLayout(
+    // Measure button in window coordinates so menu can be rendered in a top-level Modal
+    UIManager.measureInWindow(
       node,
-      rootNode,
-      () => {},
       (left: number, top: number, width: number, height: number) => {
-        const { height: screenH } = Dimensions.get('window');
+        const { width: screenW, height: screenH } = Dimensions.get('window');
         const menuWidth = 140;
         const menuHeight = 120;
 
         // Prefer showing menu below the button
-        let xPos = Math.max(8, left + width - menuWidth);
+        let xPos = left + width - menuWidth;
         let yPos = top + height + 8;
+
+        // Keep menu inside horizontal bounds
+        if (xPos < 8) {
+          // try aligning left edge with the button
+          xPos = left;
+        }
+        if (xPos + menuWidth > screenW - 8) {
+          xPos = Math.max(8, screenW - menuWidth - 8);
+        }
 
         // If not enough space below, show above
         if (yPos + menuHeight > screenH - 16) {
@@ -166,7 +173,7 @@ export function RecentlyAdded() {
       }
       
       // Decrypt the password
-      const decryptedPassword = aesDecrypt(item.encryptedPassword, vaultKey);
+      const decryptedPassword = await aesDecrypt(item.encryptedPassword, vaultKey);
       await Clipboard.setStringAsync(decryptedPassword);
       Alert.alert('Copied', 'Password copied to clipboard');
     } catch (error: any) {
@@ -200,7 +207,10 @@ export function RecentlyAdded() {
 
   return (
     <View style={styles.container} ref={rootRef as any}>
-      <Text style={styles.header}>Recently Added</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>Recently Added</Text>
+        <Ionicons name="time-outline" size={20} color="#6B72FF" />
+      </View>
       <View style={styles.list}>
         {items.map((item, index) => {
           return (
@@ -215,7 +225,7 @@ export function RecentlyAdded() {
                 </View>
               </View>
               <View style={styles.itemContent}>
-                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
                 <Text style={styles.itemTime}>{item.timeAgo}</Text>
               </View>
               <View style={styles.itemActions}>
@@ -255,14 +265,18 @@ export function RecentlyAdded() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
     marginTop: 8,
   },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 16,
+  },
+  header: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
   },
   list: {
     gap: 12,
@@ -270,9 +284,14 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   iconWrapper: {
     width: 56,
@@ -283,30 +302,32 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 12,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
   itemContent: {
     flex: 1,
+    minWidth: 0,
   },
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#111827',
     marginBottom: 4,
   },
   itemTime: {
     fontSize: 12,
-    color: '#666',
+    color: '#6B7280',
+    fontWeight: '500',
   },
   itemActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 4,
   },
   actionButton: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },

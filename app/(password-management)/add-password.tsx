@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -21,6 +21,7 @@ import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 export default function CreatePasswordScreen(): React.ReactElement {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
 
   const [title, setTitle] = useState<string>("");
   const [category, setCategory] = useState<string>("Browser");
@@ -154,7 +155,7 @@ export default function CreatePasswordScreen(): React.ReactElement {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -343,7 +344,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: BOTTOM_SAFE_AREA,
   },
   card: {
     backgroundColor: "#fff",

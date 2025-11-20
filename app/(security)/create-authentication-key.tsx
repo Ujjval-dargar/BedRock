@@ -2,12 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { authAPI } from '../../utils/api';
+import { BOTTOM_SAFE_AREA } from '@/constants/layout';
 
 export default function AuthenticationKeyScreen() {
+  const insets = useSafeAreaInsets();
   const [recoveryKey, setRecoveryKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
@@ -110,7 +112,7 @@ export default function AuthenticationKeyScreen() {
         style={styles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >

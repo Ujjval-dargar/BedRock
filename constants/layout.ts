@@ -10,4 +10,5 @@ export const BOTTOM_NAV_HEIGHT = 60;
 export const BOTTOM_CONTENT_PADDING = 100;
 
 // Total safe area for bottom spacing (navbar + extra space)
-export const BOTTOM_SAFE_AREA = 120;
+// Use this constant + insets.bottom from useSafeAreaInsets() for proper spacing
+export const BOTTOM_SAFE_AREA = 80;

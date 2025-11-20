@@ -170,16 +170,20 @@ export function CategoryCards() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingBottom: 8,
   },
   card: {
-    width: 140,
-    height: 140,
-    borderRadius: 16,
+    width: 150,
+    height: 150,
+    borderRadius: 20,
     padding: 20,
     justifyContent: 'space-between',
-    marginRight: 16,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   iconWrapper: {
     marginBottom: 12,
@@ -201,7 +205,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
   },
@@ -209,5 +213,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#FFFFFF',
     opacity: 0.95,
+    fontWeight: '500',
   },
 });

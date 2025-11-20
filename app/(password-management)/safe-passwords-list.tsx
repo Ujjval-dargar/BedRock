@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, View, Image, Alert } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -21,6 +22,7 @@ interface SafePassword {
 export default function SafePasswordsListScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [passwords, setPasswords] = useState<SafePassword[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -102,7 +104,7 @@ export default function SafePasswordsListScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}>
         {passwords.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialIcons name="security" size={64} color="#6B5BFF" />
@@ -170,7 +172,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: BOTTOM_SAFE_AREA,
   },
   emptyState: {
     flex: 1,

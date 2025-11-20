@@ -11,7 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -23,6 +23,7 @@ export default function EditPasswordScreen(props: any): React.ReactElement {
   const { route, navigation } = props || {};
   const router = useRouter();
   const localParams = useLocalSearchParams() as any;
+  const insets = useSafeAreaInsets();
 
   const idFromRoute =
     (route && route.params && route.params.id) ||
@@ -244,7 +245,7 @@ export default function EditPasswordScreen(props: any): React.ReactElement {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: BOTTOM_SAFE_AREA + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -424,7 +425,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: BOTTOM_SAFE_AREA,
   },
   card: {
     backgroundColor: "#fff",
