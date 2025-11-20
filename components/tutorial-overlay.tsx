@@ -154,39 +154,42 @@ export function TutorialOverlay({
     const navBarHeight = 60; // NAV_BAR_HEIGHT from custom-bottom-nav
     const fabSize = 56; // FAB_SIZE from custom-bottom-nav
     const navBarPaddingHorizontal = 4;
-    const navItemMaxWidth = 80;
-    const navItemPaddingHorizontal = 4;
     const circleSize = 90;
     
     // Calculate vertical position relative to screen bottom
     const navBarBottom = insets.bottom;
     const verticalCenter = navBarBottom + (navBarHeight / 2) - (circleSize / 2);
 
-    // Left section: justifyContent: 'flex-start', paddingRight: fabSize/2 (28)
-    // Right section: justifyContent: 'flex-end', paddingLeft: fabSize/2 (28)
-    // Each nav item: flex: 1, maxWidth: 80, paddingHorizontal: 4
+    // Navigation bar now uses space-evenly for equal spacing
+    // Left section: justifyContent: 'space-evenly', paddingRight: fabSize/2 (28)
+    // Right section: justifyContent: 'space-evenly', paddingLeft: fabSize/2 (28)
+    // Each nav item: minWidth: 60, paddingHorizontal: 8
     
     // Calculate section boundaries
-    const leftSectionEnd = (SCREEN_WIDTH / 2) - (fabSize / 2);
-    const rightSectionStart = (SCREEN_WIDTH / 2) + (fabSize / 2);
+    const fabCenter = SCREEN_WIDTH / 2;
+    const leftSectionStart = navBarPaddingHorizontal;
+    const leftSectionEnd = fabCenter - (fabSize / 2);
+    const rightSectionStart = fabCenter + (fabSize / 2);
+    const rightSectionEnd = SCREEN_WIDTH - navBarPaddingHorizontal;
     
-    // Items are flex: 1 with maxWidth: 80, so they take either their flex space or 80px, whichever is smaller
-    const leftSectionWidth = leftSectionEnd - navBarPaddingHorizontal;
-    const rightSectionWidth = SCREEN_WIDTH - rightSectionStart - navBarPaddingHorizontal;
+    // Available width for items (minus FAB padding)
+    const leftSectionWidth = leftSectionEnd - leftSectionStart - (fabSize / 2);
+    const rightSectionWidth = rightSectionEnd - rightSectionStart - (fabSize / 2);
     
-    // Each section has 2 items with paddingHorizontal: 4 (total 8px per item)
-    const itemWidth = Math.min(navItemMaxWidth, leftSectionWidth / 2);
+    // With space-evenly: distribute items evenly across the width
+    // For 2 items, they're positioned at 1/3 and 2/3 of the section
+    const leftItemPosition = leftSectionWidth / 3;
+    const rightItemPosition = rightSectionWidth / 3;
 
     let highlightStyle: any = {};
 
     switch (step.target) {
       case 'vault':
-        // Second item in left section (flex-start alignment)
-        // Position: edge + firstItemWidth + half of secondItem
-        const vaultX = navBarPaddingHorizontal + itemWidth + (itemWidth / 2);
+        // Second item in left section (at 2/3 position with space-evenly)
+        const vaultX = leftSectionStart + (leftItemPosition * 2);
         highlightStyle = {
           bottom: verticalCenter-6,
-          left: vaultX - (circleSize / 2),
+          left: vaultX-(circleSize/2)+28,
           width: circleSize,
           height: circleSize,
         };
@@ -195,29 +198,27 @@ export function TutorialOverlay({
         // FAB is absolutely positioned at center
         highlightStyle = {
           bottom: navBarBottom + (navBarHeight / 2) - (circleSize / 2)+18,
-          left: (SCREEN_WIDTH / 2) - (circleSize / 2)-4,
+          left: fabCenter - (circleSize / 2)-4,
           width: circleSize,
           height: circleSize,
         };
         break;
       case 'generator':
-        // First item in right section (flex-end alignment)
-        // Calculate from the end of screen backwards
-        const generatorX = SCREEN_WIDTH - navBarPaddingHorizontal - itemWidth - (itemWidth / 2);
+        // First item in right section (at 1/3 position with space-evenly)
+        const generatorX = rightSectionStart + (fabSize / 2) + rightItemPosition;
         highlightStyle = {
           bottom: verticalCenter-10,
-          left: generatorX - (circleSize / 2),
+          left: generatorX - (circleSize / 2)-26,
           width: circleSize,
           height: circleSize,
         };
         break;
       case 'risks':
-        // Second item in right section (flex-end alignment)
-        // Calculate from the end of screen backwards
-        const risksX = SCREEN_WIDTH - navBarPaddingHorizontal - (itemWidth / 2);
+        // Second item in right section (at 2/3 position with space-evenly)
+        const risksX = rightSectionStart + (fabSize / 2) + (rightItemPosition * 2);
         highlightStyle = {
           bottom: verticalCenter-6,
-          left: risksX - (circleSize / 2),
+          left: risksX - (circleSize / 2)+6,
           width: circleSize,
           height: circleSize,
         };

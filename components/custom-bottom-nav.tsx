@@ -185,23 +185,22 @@ const styles = StyleSheet.create({
   leftSection: {
     flexDirection: 'row',
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'space-evenly',
     paddingRight: FAB_SIZE / 2,
   },
   rightSection: {
     flexDirection: 'row',
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'space-evenly',
     paddingLeft: FAB_SIZE / 2,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
-    flex: 1,
-    maxWidth: 80,
+    paddingHorizontal: 8,
     paddingTop: 12,
     paddingBottom: 0,
+    minWidth: 60,
   },
   navLabel: {
     fontSize: 13,
