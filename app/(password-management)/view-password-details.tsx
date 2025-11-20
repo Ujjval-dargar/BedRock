@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { passwordAPI, storageAPI, sharingAPI, SharedPassword } from "../../utils/api";
-import { aesDecrypt } from "../../utils/crypto";
+import { aesDecrypt, generateSharedKey, decryptWithSharedKey } from "../../utils/crypto";
 import * as Clipboard from 'expo-clipboard';
 
 const CATEGORY_COLORS: Record<string, { icon: string; color: string }> = {
@@ -43,6 +43,7 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [sharePermission, setSharePermission] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [senderMessage, setSenderMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -71,8 +72,64 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
           return;
         }
         
-        // Decrypt the password
-        const decryptedPassword = await aesDecrypt(passwordEntry.encrypted_password, vaultKey);
+        // Check if this is a shared password
+        const userId = await storageAPI.getUserId();
+        let decryptedPassword: string;
+        let isShared = false;
+        let currentShare: SharedPassword | null = null;
+        
+        if (userId && userId !== passwordEntry.owner_id) {
+          // This is a shared password - use shared key for decryption
+          try {
+            const shares = await sharingAPI.getIncoming();
+            currentShare = shares.find((s: any) => s.entry_id === passwordEntry.id) || null;
+            
+            if (currentShare) {
+              isShared = true;
+              setSharePermission(currentShare.permission);
+              
+              // Get both users' public keys to regenerate the shared key
+              const ownerInfo = await sharingAPI.getUserById(passwordEntry.owner_id);
+              const currentUserInfo = await sharingAPI.getCurrentUser();
+              
+              // Regenerate the shared key
+              const sharedKey = await generateSharedKey(
+                ownerInfo.public_key_pem,
+                currentUserInfo.public_key_pem
+              );
+              
+              // Use the encrypted_password from the share record (encrypted with shared key)
+              // NOT from the password entry (encrypted with owner's vault key)
+              decryptedPassword = await decryptWithSharedKey(
+                currentShare.encrypted_password,
+                sharedKey
+              );
+              
+              // Decrypt the message if it exists
+              if (currentShare.encrypted_message) {
+                try {
+                  const decryptedMessage = await decryptWithSharedKey(
+                    currentShare.encrypted_message,
+                    sharedKey
+                  );
+                  setSenderMessage(decryptedMessage);
+                } catch (error) {
+                  console.error('Failed to decrypt message:', error);
+                }
+              }
+            } else {
+              // Not actually shared, shouldn't happen
+              decryptedPassword = await aesDecrypt(passwordEntry.encrypted_password, vaultKey);
+            }
+          } catch (error) {
+            console.error('Failed to handle shared password:', error);
+            // Fallback to normal decryption
+            decryptedPassword = await aesDecrypt(passwordEntry.encrypted_password, vaultKey);
+          }
+        } else {
+          // This is user's own password - use vault key
+          decryptedPassword = await aesDecrypt(passwordEntry.encrypted_password, vaultKey);
+        }
         
         setItem({
           id: passwordEntry.id,
@@ -84,20 +141,6 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
           category: passwordEntry.category || 'Other',
           notes: passwordEntry.notes,
         });
-        
-        // Check if password is shared with current user and get permission
-        const userId = await storageAPI.getUserId();
-        if (userId && userId !== passwordEntry.owner_id) {
-          try {
-            const shares = await sharingAPI.getIncoming();
-            const currentShare = shares.find((s: any) => s.entry_id === passwordEntry.id);
-            if (currentShare) {
-              setSharePermission(currentShare.permission);
-            }
-          } catch (error) {
-            console.error('Failed to fetch share permission:', error);
-          }
-        }
       } catch (error: any) {
         console.error('Failed to fetch password:', error);
         Alert.alert('Error', error.message || 'Failed to load password details');
@@ -254,6 +297,17 @@ export default function ViewPasswordScreen(props: any): React.ReactElement {
                 <Text style={styles.label}>Notes</Text>
                 <Text style={styles.value}>{item.notes}</Text>
               </View>
+            </View>
+          )}
+
+          {/* Sender's Message - only shown for shared passwords */}
+          {senderMessage && (
+            <View style={styles.messageCard}>
+              <View style={styles.messageHeader}>
+                <Ionicons name="mail-outline" size={18} color="#6B5BFF" />
+                <Text style={styles.messageHeaderText}>Message from Sender</Text>
+              </View>
+              <Text style={styles.messageText}>{senderMessage}</Text>
             </View>
           )}
 
@@ -447,5 +501,32 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     fontSize: 16,
     fontWeight: "700",
+  },
+  messageCard: {
+    backgroundColor: "#EEF2FF",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+  },
+  messageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  messageHeaderText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#6B5BFF",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  messageText: {
+    fontSize: 15,
+    color: "#4338CA",
+    lineHeight: 22,
   },
 });

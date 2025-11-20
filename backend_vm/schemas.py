@@ -86,6 +86,7 @@ class ShareCreate(BaseModel):
     to_user_id: int
     encrypted_key_for_recipient: bytes
     encrypted_password: bytes
+    encrypted_message: Optional[bytes] = None
     permission: Optional[str] = "view"  # 'view' or 'edit'
 
 
@@ -96,6 +97,7 @@ class ShareOut(BaseModel):
     to_user_id: int
     encrypted_key_for_recipient: bytes
     encrypted_password: bytes
+    encrypted_message: Optional[bytes] = None
     permission: str
     status: str
     created_at: datetime

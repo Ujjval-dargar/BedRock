@@ -152,3 +152,38 @@ export function validatePasswordStrength(password: string): {
     issues,
   };
 }
+
+// Generate shared encryption key from sender and receiver public keys
+export async function generateSharedKey(
+  senderPublicKey: string,
+  receiverPublicKey: string
+): Promise<string> {
+  // Combine both public keys in a deterministic way
+  // Sort them to ensure same result regardless of order
+  const keys = [senderPublicKey, receiverPublicKey].sort();
+  const combined = keys.join('::');
+  
+  // Hash the combined keys to create a shared encryption key
+  const sharedKey = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    combined
+  );
+  
+  return sharedKey;
+}
+
+// Encrypt password using shared key (for sharing)
+export async function encryptWithSharedKey(
+  plaintext: string,
+  sharedKey: string
+): Promise<string> {
+  return await aesEncrypt(plaintext, sharedKey);
+}
+
+// Decrypt password using shared key (for shared passwords)
+export async function decryptWithSharedKey(
+  ciphertext: string,
+  sharedKey: string
+): Promise<string> {
+  return await aesDecrypt(ciphertext, sharedKey);
+}

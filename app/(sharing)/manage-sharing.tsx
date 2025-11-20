@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,13 +26,13 @@ export default function ManageSharingScreen(): React.ReactElement {
   const router = useRouter();
   const params = useLocalSearchParams();
   const passwordId = params.id as string;
-  const type = params.type as "received" | "sent";
+  const typeParam = params.type as string;
+  // Map 'outgoing' to 'sent' and 'incoming' to 'received'
+  const type = typeParam === "outgoing" ? "sent" : "received";
 
   const [passwordInfo, setPasswordInfo] = useState<any>(null);
   const [sharedUsers, setSharedUsers] = useState<SharedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [linkSharingEnabled, setLinkSharingEnabled] = useState(false);
-  const [expirationEnabled, setExpirationEnabled] = useState(false);
 
   const fetchShareData = async () => {
     try {
@@ -47,30 +46,52 @@ export default function ManageSharingScreen(): React.ReactElement {
         category: password.category || "Other",
       });
 
-      // Fetch all shares for this password
-      const shares = await sharingAPI.getPasswordShares(Number(passwordId));
-      
-      // Fetch user info for each share
-      const usersWithDetails = await Promise.all(
-        shares.map(async (share) => {
+      if (type === "sent") {
+        // Fetch all shares for this password (outgoing)
+        const shares = await sharingAPI.getPasswordShares(Number(passwordId));
+        
+        // Fetch user info for each share
+        const usersWithDetails = await Promise.all(
+          shares.map(async (share) => {
+            try {
+              const user = await sharingAPI.getUserById(share.to_user_id);
+              return {
+                shareId: share.id,
+                userId: user.user_id,
+                username: user.username,
+                email: user.email,
+                sharedDate: new Date(share.created_at).toLocaleDateString(),
+                permission: share.permission || "view",
+              };
+            } catch {
+              return null;
+            }
+          })
+        );
+        
+        const validUsers = usersWithDetails.filter((u): u is SharedUser => u !== null);
+        setSharedUsers(validUsers);
+      } else {
+        // Fetch incoming share to get sender info
+        const shares = await sharingAPI.getIncoming();
+        const currentShare = shares.find((s: any) => s.entry_id === Number(passwordId));
+        
+        if (currentShare) {
           try {
-            const user = await sharingAPI.getUserById(share.to_user_id);
-            return {
-              shareId: share.id,
-              userId: user.user_id,
-              username: user.username,
-              email: user.email,
-              sharedDate: new Date(share.created_at).toLocaleDateString(),
-              permission: share.permission || "view",
-            };
-          } catch {
-            return null;
+            const sender = await sharingAPI.getUserById(currentShare.from_user_id);
+            setSharedUsers([{
+              shareId: currentShare.id,
+              userId: sender.user_id,
+              username: sender.username,
+              email: sender.email,
+              sharedDate: new Date(currentShare.created_at).toLocaleDateString(),
+              permission: currentShare.permission || "view",
+            }]);
+          } catch (error) {
+            console.error("Failed to fetch sender info:", error);
           }
-        })
-      );
-      
-      const validUsers = usersWithDetails.filter((u): u is SharedUser => u !== null);
-      setSharedUsers(validUsers);
+        }
+      }
     } catch (error) {
       console.error("Error fetching share data:", error);
       Alert.alert("Error", "Failed to load sharing information");
@@ -117,10 +138,6 @@ export default function ManageSharingScreen(): React.ReactElement {
     );
   };
 
-  const handleCopyLink = (): void => {
-    Alert.alert("Success", "Sharing link copied to clipboard");
-  };
-
   const handleStopSharing = (): void => {
     Alert.alert(
       "Stop Sharing",
@@ -130,10 +147,47 @@ export default function ManageSharingScreen(): React.ReactElement {
         {
           text: "Stop Sharing",
           style: "destructive",
-          onPress: () => {
-            Alert.alert("Success", "Password sharing stopped", [
-              { text: "OK", onPress: () => router.back() },
-            ]);
+          onPress: async () => {
+            try {
+              // Delete all shares for this password
+              await Promise.all(
+                sharedUsers.map(user => sharingAPI.deleteShare(user.shareId))
+              );
+              Alert.alert("Success", "Password sharing stopped with all users", [
+                { text: "OK", onPress: () => router.back() },
+              ]);
+            } catch (error) {
+              console.error("Failed to stop sharing:", error);
+              Alert.alert("Error", "Failed to stop sharing. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleLeaveShare = (): void => {
+    if (sharedUsers.length === 0) return;
+    
+    Alert.alert(
+      "Remove from Vault",
+      "Are you sure you want to remove this shared password from your vault?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Delete the share record
+              await sharingAPI.deleteShare(sharedUsers[0].shareId);
+              Alert.alert("Success", "Password removed from your vault", [
+                { text: "OK", onPress: () => router.back() },
+              ]);
+            } catch (error) {
+              console.error("Failed to leave share:", error);
+              Alert.alert("Error", "Failed to remove password. Please try again.");
+            }
           },
         },
       ]
@@ -213,12 +267,12 @@ export default function ManageSharingScreen(): React.ReactElement {
                 <View style={styles.userActions}>
                   <View style={styles.permissionPill}>
                     <Ionicons
-                      name={user.permission === "edit" ? "create-outline" : "eye-outline"}
+                      name="eye-outline"
                       size={14}
-                      color={user.permission === "edit" ? "#6B5BFF" : "#059669"}
+                      color="#059669"
                     />
-                    <Text style={[styles.permissionPillText, user.permission === "edit" && styles.editPermissionText]}>
-                      {user.permission === "edit" ? "Edit" : "View"}
+                    <Text style={styles.permissionPillText}>
+                      View
                     </Text>
                   </View>
                   
@@ -231,56 +285,6 @@ export default function ManageSharingScreen(): React.ReactElement {
                 </View>
               </View>
             ))}
-
-            {/* Link Sharing */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardHeaderLeft}>
-                  <Ionicons name="link-outline" size={20} color="#6B5BFF" />
-                  <Text style={styles.cardTitle}>Link Sharing</Text>
-                </View>
-                <Switch
-                  value={linkSharingEnabled}
-                  onValueChange={setLinkSharingEnabled}
-                  trackColor={{ false: "#D1D5DB", true: "#A78BFA" }}
-                  thumbColor={linkSharingEnabled ? "#6B5BFF" : "#F3F4F6"}
-                />
-              </View>
-              
-              {linkSharingEnabled && (
-                <>
-                  <Text style={styles.cardDescription}>
-                    Anyone with the link can access this password
-                  </Text>
-                  <TouchableOpacity style={styles.linkButton} onPress={handleCopyLink}>
-                    <Ionicons name="copy-outline" size={18} color="#6B5BFF" />
-                    <Text style={styles.linkButtonText}>Copy Link</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-
-            {/* Expiration Settings */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardHeaderLeft}>
-                  <Ionicons name="time-outline" size={20} color="#6B5BFF" />
-                  <Text style={styles.cardTitle}>Auto Expiration</Text>
-                </View>
-                <Switch
-                  value={expirationEnabled}
-                  onValueChange={setExpirationEnabled}
-                  trackColor={{ false: "#D1D5DB", true: "#A78BFA" }}
-                  thumbColor={expirationEnabled ? "#6B5BFF" : "#F3F4F6"}
-                />
-              </View>
-              
-              {expirationEnabled && (
-                <Text style={styles.cardDescription}>
-                  Sharing will automatically expire after 30 days
-                </Text>
-              )}
-            </View>
 
             {/* Stop Sharing Button */}
             <TouchableOpacity style={styles.stopSharingButton} onPress={handleStopSharing}>
@@ -326,7 +330,7 @@ export default function ManageSharingScreen(): React.ReactElement {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.leaveButton}>
+            <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveShare}>
               <Ionicons name="exit-outline" size={20} color="#DC2626" />
               <Text style={styles.leaveButtonText}>Remove from My Vault</Text>
             </TouchableOpacity>

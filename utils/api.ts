@@ -64,6 +64,7 @@ export interface SharedPassword {
   to_user_id: number;
   encrypted_key_for_recipient: string;
   encrypted_password: string;
+  encrypted_message?: string;
   permission: string;
   status: string;
   created_at: string;
@@ -458,11 +459,19 @@ export const passwordAPI = {
 
 // Sharing APIs
 export const sharingAPI = {
+  async getCurrentUser(): Promise<{ user_id: number; username: string; email: string; public_key_pem: string }> {
+    return await fetchAPI('/users/me');
+  },
+
   async getUserByUsername(username: string): Promise<{ user_id: number; username: string; email: string; public_key_pem: string }> {
     return await fetchAPI(`/users/by-username/${encodeURIComponent(username)}`);
   },
 
-  async getUserById(userId: number): Promise<{ user_id: number; username: string; email: string }> {
+  async getUserByEmail(email: string): Promise<{ user_id: number; username: string; email: string; public_key_pem: string }> {
+    return await fetchAPI(`/users/by-email/${encodeURIComponent(email)}`);
+  },
+
+  async getUserById(userId: number): Promise<{ user_id: number; username: string; email: string; public_key_pem: string }> {
     return await fetchAPI(`/users/${userId}`);
   },
 
@@ -471,7 +480,8 @@ export const sharingAPI = {
     toUserId: number,
     encryptedKeyForRecipient: string,
     encryptedPassword: string,
-    permission: string = "view"
+    permission: string = "view",
+    encryptedMessage?: string
   ): Promise<SharedPassword> {
     return await fetchAPI('/share', {
       method: 'POST',
@@ -480,6 +490,7 @@ export const sharingAPI = {
         to_user_id: toUserId,
         encrypted_key_for_recipient: encryptedKeyForRecipient,
         encrypted_password: encryptedPassword,
+        encrypted_message: encryptedMessage,
         permission: permission,
       }),
     });

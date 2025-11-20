@@ -55,6 +55,8 @@ class SharedPassword(Base):
     encrypted_key_for_recipient = Column(LargeBinary, nullable=False)
     # carry the encrypted password blob as-is
     encrypted_password = Column(LargeBinary, nullable=False)
+    # optional message from sender (encrypted with shared key)
+    encrypted_message = Column(LargeBinary, nullable=True)
     permission = Column(String(20), default="view")  # 'view' or 'edit'
     status = Column(String(50), default="pending")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

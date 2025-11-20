@@ -473,6 +473,7 @@ async def share_password(share: schemas.ShareCreate, current: models.User = Depe
         to_user_id=share.to_user_id,
         encrypted_key_for_recipient=share.encrypted_key_for_recipient,
         encrypted_password=share.encrypted_password,
+        encrypted_message=share.encrypted_message,
         permission=share.permission or "view",
         status="pending",
     )
@@ -502,17 +503,30 @@ async def get_public_key(user_id: int, db: AsyncSession = Depends(get_session)):
     return {"user_id": user.id, "public_key_pem": user.public_key_pem}
 
 
+@app.get("/users/me")
+async def get_current_user_info(current: models.User = Depends(auth.get_current_user)):
+    return {"user_id": current.id, "username": current.username, "email": current.email, "public_key_pem": current.public_key_pem}
+
+
 @app.get("/users/{user_id}")
 async def get_user_info(user_id: int, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
     user = await crud.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"user_id": user.id, "username": user.username, "email": user.email}
+    return {"user_id": user.id, "username": user.username, "email": user.email, "public_key_pem": user.public_key_pem}
 
 
 @app.get("/users/by-username/{username}")
 async def get_user_by_username(username: str, db: AsyncSession = Depends(get_session)):
     user = await crud.get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"user_id": user.id, "username": user.username, "email": user.email, "public_key_pem": user.public_key_pem}
+
+
+@app.get("/users/by-email/{email}")
+async def get_user_by_email(email: str, db: AsyncSession = Depends(get_session)):
+    user = await crud.get_user_by_email(db, email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"user_id": user.id, "username": user.username, "email": user.email, "public_key_pem": user.public_key_pem}

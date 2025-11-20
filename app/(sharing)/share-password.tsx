@@ -13,18 +13,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { sharingAPI, passwordAPI } from "../../utils/api";
-import * as Crypto from "expo-crypto";
-
-type Permission = "view" | "edit";
+import { sharingAPI, passwordAPI, storageAPI } from "../../utils/api";
+import { generateSharedKey, encryptWithSharedKey, aesDecrypt } from "../../utils/crypto";
 
 export default function SharePasswordScreen(): React.ReactElement {
   const router = useRouter();
   const params = useLocalSearchParams();
   const passwordId = params.id || params.passwordId; // Get password ID from params (support both 'id' and 'passwordId')
 
-  const [username, setUsername] = useState<string>("");
-  const [permission, setPermission] = useState<Permission>("view");
+  const [email, setEmail] = useState<string>("");
   const [message, setMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -33,8 +30,8 @@ export default function SharePasswordScreen(): React.ReactElement {
   };
 
   const handleShare = async (): Promise<void> => {
-    if (!username.trim()) {
-      Alert.alert("Error", "Please enter a username");
+    if (!email.trim()) {
+      Alert.alert("Error", "Please enter an email address");
       return;
     }
 
@@ -46,32 +43,74 @@ export default function SharePasswordScreen(): React.ReactElement {
     setIsLoading(true);
     
     try {
-      // 1. Look up recipient by username
-      const recipient = await sharingAPI.getUserByUsername(username.trim());
+      // 1. Get current user info (sender)
+      const currentUser = await sharingAPI.getCurrentUser();
       
-      // 2. Get the password entry to encrypt
+      // 2. Check if user is trying to share with themselves
+      if (email.trim().toLowerCase() === currentUser.email.toLowerCase()) {
+        Alert.alert("Error", "You cannot share a password with yourself");
+        setIsLoading(false);
+        return;
+      }
+      
+      // 3. Look up recipient by email
+      let recipient;
+      try {
+        recipient = await sharingAPI.getUserByEmail(email.trim());
+      } catch (error: any) {
+        Alert.alert(
+          "User Not Found", 
+          "No user found with this email address. Please make sure they have signed up for BedRock."
+        );
+        setIsLoading(false);
+        return;
+      }
+      
+      // 4. Get the password entry
       const passwordEntry = await passwordAPI.get(Number(passwordId));
       
-      // 3. Encrypt the password with recipient's public key
-      // For now, we'll use a simple encryption with the encrypted password
-      // In production, you'd use the recipient's RSA public key properly
-      const encryptedKey = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        `${recipient.user_id}-${passwordId}-${Date.now()}`
+      // 5. Get sender's vault key to decrypt the password
+      const vaultKey = await storageAPI.getVaultKey();
+      if (!vaultKey) {
+        Alert.alert("Error", "Vault key not found. Please log in again.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // 6. Decrypt the password with sender's vault key
+      const decryptedPassword = await aesDecrypt(passwordEntry.encrypted_password, vaultKey);
+      
+      // 7. Generate shared key from both public keys
+      const sharedKey = await generateSharedKey(
+        currentUser.public_key_pem,
+        recipient.public_key_pem
       );
       
-      // 4. Share the password
+      // 8. Re-encrypt the password with the shared key
+      const reEncryptedPassword = await encryptWithSharedKey(
+        decryptedPassword,
+        sharedKey
+      );
+      
+      // 9. Encrypt the message if provided
+      let encryptedMessage: string | undefined;
+      if (message.trim()) {
+        encryptedMessage = await encryptWithSharedKey(message.trim(), sharedKey);
+      }
+      
+      // 10. Share the password with the re-encrypted version and optional message
       await sharingAPI.share(
         Number(passwordId),
         recipient.user_id,
-        encryptedKey,
-        passwordEntry.encrypted_password,
-        permission
+        sharedKey, // Store the shared key for reference
+        reEncryptedPassword, // Store password encrypted with shared key
+        "view",
+        encryptedMessage // Store message encrypted with shared key
       );
 
       Alert.alert(
         "Success",
-        `Password shared with ${recipient.username} successfully!`,
+        `Password shared with ${recipient.email} successfully!`,
         [{ text: "OK", onPress: () => router.back() }]
       );
     } catch (error: any) {
@@ -117,71 +156,16 @@ export default function SharePasswordScreen(): React.ReactElement {
           </Text>
 
           <View style={styles.card}>
-            <Text style={styles.label}>Recipient Username *</Text>
+            <Text style={styles.label}>Recipient Email *</Text>
             <TextInput
               style={styles.input}
-              placeholder="username"
-              value={username}
-              onChangeText={setUsername}
+              placeholder="example@email.com"
+              value={email}
+              onChangeText={setEmail}
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="email-address"
             />
-
-            <Text style={[styles.label, { marginTop: 20 }]}>Permission Level *</Text>
-            <View style={styles.permissionContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.permissionBtn,
-                  permission === "view" && styles.permissionBtnActive,
-                ]}
-                onPress={() => setPermission("view")}
-              >
-                <Ionicons
-                  name="eye-outline"
-                  size={20}
-                  color={permission === "view" ? "#fff" : "#666"}
-                />
-                <Text
-                  style={[
-                    styles.permissionText,
-                    permission === "view" && styles.permissionTextActive,
-                  ]}
-                >
-                  View Only
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.permissionBtn,
-                  permission === "edit" && styles.permissionBtnActive,
-                ]}
-                onPress={() => setPermission("edit")}
-              >
-                <Ionicons
-                  name="create-outline"
-                  size={20}
-                  color={permission === "edit" ? "#fff" : "#666"}
-                />
-                <Text
-                  style={[
-                    styles.permissionText,
-                    permission === "edit" && styles.permissionTextActive,
-                  ]}
-                >
-                  Can Edit
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.permissionInfo}>
-              <Ionicons name="information-circle-outline" size={16} color="#666" />
-              <Text style={styles.permissionInfoText}>
-                {permission === "view"
-                  ? "User can only view the password details"
-                  : "User can view and modify the password"}
-              </Text>
-            </View>
 
             <Text style={[styles.label, { marginTop: 20 }]}>Message (Optional)</Text>
             <TextInput

@@ -64,7 +64,7 @@ const SharedPasswordCard = ({ item, type }: { item: SharedPassword; type: "recei
   const categoryColors = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={handlePress}>
+    <TouchableOpacity style={styles.card} onPress={() => handleCardPress(item, type === "received" ? "incoming" : "outgoing")}>
       <View style={[styles.cardIconContainer, { backgroundColor: categoryColors.bg }]}>
         <Ionicons name={iconName as any} size={24} color={categoryColors.icon} />
       </View>
@@ -72,14 +72,14 @@ const SharedPasswordCard = ({ item, type }: { item: SharedPassword; type: "recei
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{item.title}</Text>
-          <View style={[styles.permissionBadge, item.permission === "edit" && styles.permissionBadgeEdit]}>
+          <View style={styles.permissionBadge}>
             <Ionicons
-              name={item.permission === "edit" ? "create-outline" : "eye-outline"}
+              name="eye-outline"
               size={12}
-              color={item.permission === "edit" ? "#6B5BFF" : "#059669"}
+              color="#059669"
             />
-            <Text style={[styles.permissionText, item.permission === "edit" && styles.permissionTextEdit]}>
-              {item.permission === "edit" ? "Edit" : "View"}
+            <Text style={styles.permissionText}>
+              View
             </Text>
           </View>
         </View>
