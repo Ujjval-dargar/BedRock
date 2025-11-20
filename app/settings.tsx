@@ -76,17 +76,6 @@ const settingsItems: SettingsItem[] = [
     accentBackground: '#D1FAE5',
   },
   {
-    id: 'notifications',
-    icon: 'notifications',
-    iconFamily: 'Ionicons',
-    title: 'Notifications',
-    subtitle: 'Alerts for security & updates',
-    type: 'toggle',
-    toggleValue: false,
-    accentColor: '#F59E0B',
-    accentBackground: '#FEF3C7',
-  },
-  {
     id: 'biometric',
     icon: 'finger-print',
     iconFamily: 'Ionicons',
@@ -390,6 +379,8 @@ export default function SettingsScreen() {
     // Handle navigation based on itemId
     if (itemId === 'shared-passwords') {
       router.push('/shared-passwords-list' as any);
+    } else if (itemId === 'account-security') {
+      router.push('/(security)/account-security' as any);
     }
   };
 
@@ -424,10 +415,7 @@ export default function SettingsScreen() {
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{username || 'User'}</Text>
-              <View style={styles.premiumBadge}>
-                <Ionicons name="sparkles" size={12} color="#6F6BF5" />
-                <Text style={styles.premiumText}>Premium Plan</Text>
-              </View>
+              <Text style={styles.profileEmail}>{email || 'email@example.com'}</Text>
             </View>
           </View>
           <TouchableOpacity 
@@ -688,15 +676,10 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  premiumText: {
+  profileEmail: {
     fontSize: 13,
-    color: '#6F6BF5',
-    fontWeight: '600',
+    color: '#6B7280',
+    fontWeight: '400',
   },
   editButton: {
     width: 40,
