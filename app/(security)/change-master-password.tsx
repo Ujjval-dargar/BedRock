@@ -28,7 +28,12 @@ export default function ChangeMasterPasswordScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const isPasswordValid = newPassword.length >= 8;
+  // Password validation checks
+  const hasMinLength = newPassword.length >= 8;
+  const hasUpperCase = /[A-Z]/.test(newPassword);
+  const hasLowerCase = /[a-z]/.test(newPassword);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+  const isPasswordValid = hasMinLength && hasUpperCase && hasLowerCase && hasSpecialChar;
 
   const validateCurrentPassword = async (): Promise<boolean> => {
     try {
@@ -62,7 +67,7 @@ export default function ChangeMasterPasswordScreen() {
     }
 
     if (!isPasswordValid) {
-      Alert.alert('Invalid Password', 'Password must be at least 8 characters long');
+      Alert.alert('Invalid Password', 'Password must meet all requirements:\n- At least 8 characters\n- One uppercase letter\n- One lowercase letter\n- One special character');
       return;
     }
 
@@ -235,15 +240,54 @@ export default function ChangeMasterPasswordScreen() {
             </Text>
             <View style={styles.requirementItem}>
               <Ionicons 
-                name={isPasswordValid ? "checkmark-circle" : "close-circle"} 
+                name={hasMinLength ? "checkmark-circle" : "close-circle"} 
                 size={20} 
-                color={isPasswordValid ? "#10B981" : "#EF4444"} 
+                color={hasMinLength ? "#10B981" : "#EF4444"} 
               />
               <Text style={[
                 styles.requirementText,
-                isPasswordValid ? styles.requirementTextValid : styles.requirementTextInvalid
+                hasMinLength ? styles.requirementTextValid : styles.requirementTextInvalid
               ]}>
                 At least 8 characters
+              </Text>
+            </View>
+            <View style={styles.requirementItem}>
+              <Ionicons 
+                name={hasUpperCase ? "checkmark-circle" : "close-circle"} 
+                size={20} 
+                color={hasUpperCase ? "#10B981" : "#EF4444"} 
+              />
+              <Text style={[
+                styles.requirementText,
+                hasUpperCase ? styles.requirementTextValid : styles.requirementTextInvalid
+              ]}>
+                One uppercase letter
+              </Text>
+            </View>
+            <View style={styles.requirementItem}>
+              <Ionicons 
+                name={hasLowerCase ? "checkmark-circle" : "close-circle"} 
+                size={20} 
+                color={hasLowerCase ? "#10B981" : "#EF4444"} 
+              />
+              <Text style={[
+                styles.requirementText,
+                hasLowerCase ? styles.requirementTextValid : styles.requirementTextInvalid
+              ]}>
+                One lowercase letter
+              </Text>
+            </View>
+            <View style={styles.requirementItem}>
+              <Ionicons 
+                name={hasSpecialChar ? "checkmark-circle" : "close-circle"} 
+                size={20} 
+                color={hasSpecialChar ? "#10B981" : "#EF4444"} 
+              />
+              <Text style={[
+                styles.requirementText,
+                hasSpecialChar ? styles.requirementTextValid : styles.requirementTextInvalid
+              ]}>
+                One special character (!@#$%^&*)
               </Text>
             </View>
           </View>

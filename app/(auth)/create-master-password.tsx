@@ -5,7 +5,6 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../utils/api';
-import { PasswordStrengthIndicator } from '../../components/password-strength-indicator';
 
 export default function MasterPasswordScreen() {
   const [username, setUsername] = useState('');
@@ -14,6 +13,13 @@ export default function MasterPasswordScreen() {
   const [showMasterPassword, setShowMasterPassword] = useState(false);
   const [showConfirmMasterPassword, setShowConfirmMasterPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Password validation checks
+  const hasMinLength = masterPassword.length >= 8;
+  const hasUpperCase = /[A-Z]/.test(masterPassword);
+  const hasLowerCase = /[a-z]/.test(masterPassword);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(masterPassword);
+  const isPasswordValid = hasMinLength && hasUpperCase && hasLowerCase && hasSpecialChar;
 
   // Password validation function
   const validatePassword = (password: string): { isValid: boolean; message: string } => {
@@ -26,10 +32,7 @@ export default function MasterPasswordScreen() {
     if (!/[a-z]/.test(password)) {
       return { isValid: false, message: 'Password must contain at least one lowercase letter' };
     }
-    if (!/[0-9]/.test(password)) {
-      return { isValid: false, message: 'Password must contain at least one number' };
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
       return { isValid: false, message: 'Password must contain at least one special character (!@#$%^&*)' };
     }
     return { isValid: true, message: '' };
@@ -140,11 +143,6 @@ export default function MasterPasswordScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Password Strength Indicator */}
-              {masterPassword.length > 0 && (
-                <PasswordStrengthIndicator password={masterPassword} />
-              )}
-
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
@@ -166,6 +164,71 @@ export default function MasterPasswordScreen() {
                     color="#626262"
                   />
                 </TouchableOpacity>
+              </View>
+
+              {/* Password Requirements */}
+              <View style={[
+                styles.requirementsCard,
+                isPasswordValid ? styles.requirementsCardValid : styles.requirementsCardInvalid
+              ]}>
+                <Text style={[
+                  styles.requirementsTitle,
+                  isPasswordValid ? styles.requirementsTitleValid : styles.requirementsTitleInvalid
+                ]}>
+                  Password Requirements:
+                </Text>
+                <View style={styles.requirementItem}>
+                  <Ionicons 
+                    name={hasMinLength ? "checkmark-circle" : "close-circle"} 
+                    size={20} 
+                    color={hasMinLength ? "#10B981" : "#EF4444"} 
+                  />
+                  <Text style={[
+                    styles.requirementText,
+                    hasMinLength ? styles.requirementTextValid : styles.requirementTextInvalid
+                  ]}>
+                    At least 8 characters
+                  </Text>
+                </View>
+                <View style={styles.requirementItem}>
+                  <Ionicons 
+                    name={hasUpperCase ? "checkmark-circle" : "close-circle"} 
+                    size={20} 
+                    color={hasUpperCase ? "#10B981" : "#EF4444"} 
+                  />
+                  <Text style={[
+                    styles.requirementText,
+                    hasUpperCase ? styles.requirementTextValid : styles.requirementTextInvalid
+                  ]}>
+                    One uppercase letter
+                  </Text>
+                </View>
+                <View style={styles.requirementItem}>
+                  <Ionicons 
+                    name={hasLowerCase ? "checkmark-circle" : "close-circle"} 
+                    size={20} 
+                    color={hasLowerCase ? "#10B981" : "#EF4444"} 
+                  />
+                  <Text style={[
+                    styles.requirementText,
+                    hasLowerCase ? styles.requirementTextValid : styles.requirementTextInvalid
+                  ]}>
+                    One lowercase letter
+                  </Text>
+                </View>
+                <View style={styles.requirementItem}>
+                  <Ionicons 
+                    name={hasSpecialChar ? "checkmark-circle" : "close-circle"} 
+                    size={20} 
+                    color={hasSpecialChar ? "#10B981" : "#EF4444"} 
+                  />
+                  <Text style={[
+                    styles.requirementText,
+                    hasSpecialChar ? styles.requirementTextValid : styles.requirementTextInvalid
+                  ]}>
+                    One special character (!@#$%^&*)
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -272,6 +335,46 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '600',
+  },
+  requirementsCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 2,
+  },
+  requirementsCardValid: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#10B981',
+  },
+  requirementsCardInvalid: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#EF4444',
+  },
+  requirementsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  requirementsTitleValid: {
+    color: '#065F46',
+  },
+  requirementsTitleInvalid: {
+    color: '#991B1B',
+  },
+  requirementItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  requirementText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  requirementTextValid: {
+    color: '#059669',
+  },
+  requirementTextInvalid: {
+    color: '#DC2626',
   },
 });
 

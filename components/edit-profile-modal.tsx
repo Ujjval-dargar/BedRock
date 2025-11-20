@@ -5,8 +5,11 @@ import {
   Alert,
   InteractionManager,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -146,71 +149,83 @@ export function EditProfileModal({
           <Pressable style={StyleSheet.absoluteFillObject} onPress={handleBackdropPress} />
         </Animated.View>
 
-        <Animated.View style={[styles.modal, { paddingBottom: Math.max(insets.bottom, 16) }, modalStyle]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Edit Profile</Text>
-            <Pressable style={styles.closeButton} onPress={handleClose}>
-              <MaterialIcons name="close" size={20} color="#000" />
-            </Pressable>
-          </View>
-
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Username</Text>
-              <TextInput
-                style={[styles.input, errors.username && styles.inputError]}
-                value={username}
-                onChangeText={(text: string) => {
-                  setUsername(text);
-                  setErrors((prev) => ({ ...prev, username: undefined }));
-                }}
-                placeholder="Enter username"
-                autoCapitalize="none"
-                editable={!loading}
-              />
-              {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoid}
+        >
+          <Animated.View style={[styles.modal, { paddingBottom: Math.max(insets.bottom, 16) }, modalStyle]}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              bounces={false}
+              contentContainerStyle={styles.scrollContent}
+            >
+            <View style={styles.header}>
+              <Text style={styles.title}>Edit Profile</Text>
+              <Pressable style={styles.closeButton} onPress={handleClose}>
+                <MaterialIcons name="close" size={20} color="#000" />
+              </Pressable>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
-                value={email}
-                onChangeText={(text: string) => {
-                  setEmail(text);
-                  setErrors((prev) => ({ ...prev, email: undefined }));
-                }}
-                placeholder="Enter email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={!loading}
-              />
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Username</Text>
+                <TextInput
+                  style={[styles.input, errors.username && styles.inputError]}
+                  value={username}
+                  onChangeText={(text: string) => {
+                    setUsername(text);
+                    setErrors((prev) => ({ ...prev, username: undefined }));
+                  }}
+                  placeholder="Enter username"
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+                {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  value={email}
+                  onChangeText={(text: string) => {
+                    setEmail(text);
+                    setErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
+                  placeholder="Enter email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+              </View>
             </View>
-          </View>
 
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={handleClose}
+                disabled={loading}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
-              onPress={handleSave}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.button, styles.saveButton, loading && styles.buttonDisabled]}
+                onPress={handleSave}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save Changes</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </Animated.View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -221,6 +236,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     overflow: 'hidden',
+  },
+  keyboardAvoid: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -235,6 +254,9 @@ const styles = StyleSheet.create({
     minHeight: 400,
     maxHeight: '70%',
     width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',

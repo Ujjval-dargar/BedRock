@@ -15,6 +15,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { passwordAPI, storageAPI, authAPI } from '../utils/api';
@@ -384,6 +385,8 @@ export default function SettingsScreen() {
       router.push('/(security)/account-security' as any);
     } else if (itemId === 'backup') {
       router.push('/(security)/backup-sync' as any);
+    } else if (itemId === 'help-support') {
+      router.push('/help-support' as any);
     }
   };
 
@@ -504,7 +507,7 @@ export default function SettingsScreen() {
 
         {/* About Section */}
         <View style={styles.aboutSection}>
-          <TouchableOpacity style={styles.aboutItem} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.aboutItem} activeOpacity={0.7} onPress={() => router.push('/about' as any)}>
             <View style={styles.aboutLeft}>
               <Ionicons name="information-circle-outline" size={20} color="#6F6BF5" />
               <Text style={styles.aboutText}>About BedRock</Text>
@@ -514,7 +517,7 @@ export default function SettingsScreen() {
           
           <View style={styles.divider} />
           
-          <TouchableOpacity style={styles.aboutItem} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.aboutItem} activeOpacity={0.7} onPress={() => router.push('/privacy-policy' as any)}>
             <View style={styles.aboutLeft}>
               <Ionicons name="document-text-outline" size={20} color="#6F6BF5" />
               <Text style={styles.aboutText}>Privacy Policy</Text>
@@ -524,7 +527,7 @@ export default function SettingsScreen() {
           
           <View style={styles.divider} />
           
-          <TouchableOpacity style={styles.aboutItem} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.aboutItem} activeOpacity={0.7} onPress={() => router.push('/terms-of-service' as any)}>
             <View style={styles.aboutLeft}>
               <Ionicons name="shield-outline" size={20} color="#6F6BF5" />
               <Text style={styles.aboutText}>Terms of Service</Text>
@@ -548,6 +551,10 @@ export default function SettingsScreen() {
         onRequestClose={handleCancelPasswordModal}
       >
         <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalKeyboardAvoid}
+          >
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Enable Fingerprint</Text>
             <Text style={styles.modalSubtitle}>
@@ -595,6 +602,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -813,6 +821,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  modalKeyboardAvoid: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
   modalContainer: {
     backgroundColor: '#FFFFFF',
