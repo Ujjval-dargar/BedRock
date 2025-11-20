@@ -382,6 +382,8 @@ export default function SettingsScreen() {
       router.push('/shared-passwords-list' as any);
     } else if (itemId === 'account-security') {
       router.push('/(security)/account-security' as any);
+    } else if (itemId === 'backup') {
+      router.push('/(security)/backup-sync' as any);
     }
   };
 
