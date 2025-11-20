@@ -85,12 +85,50 @@ export default function VerificationScreen() {
       
       if (response.verified) {
         console.log('✓ Email verified successfully');
-        Alert.alert('Success', 'Email verified successfully!', [
-          { text: 'OK', onPress: () => router.push('/(security)/create-authentication-key' as any) }
-        ]);
+        
+        // Complete the signup process
+        await completeSignup();
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Invalid or expired verification code');
+      setIsLoading(false);
+    }
+  };
+
+  const completeSignup = async () => {
+    try {
+      // Get stored signup data
+      const username = await AsyncStorage.getItem('temp_signup_username');
+      const masterPassword = await AsyncStorage.getItem('temp_signup_master_password');
+
+      if (!email || !username || !masterPassword) {
+        throw new Error('Signup data not found. Please start again.');
+      }
+
+      // Call signup API to create the account
+      await authAPI.signup(username, email, masterPassword);
+      
+      // Clear all temporary signup data
+      await AsyncStorage.multiRemove([
+        'temp_signup_email',
+        'temp_signup_username',
+        'temp_signup_master_password'
+      ]);
+
+      // Show success and navigate to login
+      Alert.alert(
+        '✅ Account Created Successfully!',
+        'Your account has been created. Please login to continue.',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => router.replace('/(auth)/login' as any)
+          }
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create account. Please try again.');
+      // On error, allow them to try verification again
     } finally {
       setIsLoading(false);
     }

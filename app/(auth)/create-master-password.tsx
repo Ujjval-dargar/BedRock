@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,12 +14,22 @@ export default function MasterPasswordScreen() {
   const [showConfirmMasterPassword, setShowConfirmMasterPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Show warning popup when screen loads
+  useEffect(() => {
+    Alert.alert(
+      '⚠️ Important Security Notice',
+      'Your master password cannot be recovered if forgotten. Please choose a strong password and store it in a safe place.\n\nThere is no password recovery option available.',
+      [{ text: 'I Understand', style: 'default' }]
+    );
+  }, []);
+
   // Password validation checks
   const hasMinLength = masterPassword.length >= 8;
   const hasUpperCase = /[A-Z]/.test(masterPassword);
   const hasLowerCase = /[a-z]/.test(masterPassword);
+  const hasDigit = /[0-9]/.test(masterPassword);
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(masterPassword);
-  const isPasswordValid = hasMinLength && hasUpperCase && hasLowerCase && hasSpecialChar;
+  const isPasswordValid = hasMinLength && hasUpperCase && hasLowerCase && hasDigit && hasSpecialChar;
 
   // Password validation function
   const validatePassword = (password: string): { isValid: boolean; message: string } => {
@@ -31,6 +41,9 @@ export default function MasterPasswordScreen() {
     }
     if (!/[a-z]/.test(password)) {
       return { isValid: false, message: 'Password must contain at least one lowercase letter' };
+    }
+    if (!/[0-9]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one digit (0-9)' };
     }
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
       return { isValid: false, message: 'Password must contain at least one special character (!@#$%^&*)' };
@@ -166,17 +179,18 @@ export default function MasterPasswordScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Password Requirements */}
-              <View style={[
-                styles.requirementsCard,
-                isPasswordValid ? styles.requirementsCardValid : styles.requirementsCardInvalid
-              ]}>
-                <Text style={[
-                  styles.requirementsTitle,
-                  isPasswordValid ? styles.requirementsTitleValid : styles.requirementsTitleInvalid
+              {/* Password Requirements - Only show when user starts typing */}
+              {masterPassword.length > 0 && (
+                <View style={[
+                  styles.requirementsCard,
+                  isPasswordValid ? styles.requirementsCardValid : styles.requirementsCardInvalid
                 ]}>
-                  Password Requirements:
-                </Text>
+                  <Text style={[
+                    styles.requirementsTitle,
+                    isPasswordValid ? styles.requirementsTitleValid : styles.requirementsTitleInvalid
+                  ]}>
+                    Password Requirements:
+                  </Text>
                 <View style={styles.requirementItem}>
                   <Ionicons 
                     name={hasMinLength ? "checkmark-circle" : "close-circle"} 
@@ -218,6 +232,19 @@ export default function MasterPasswordScreen() {
                 </View>
                 <View style={styles.requirementItem}>
                   <Ionicons 
+                    name={hasDigit ? "checkmark-circle" : "close-circle"} 
+                    size={20} 
+                    color={hasDigit ? "#10B981" : "#EF4444"} 
+                  />
+                  <Text style={[
+                    styles.requirementText,
+                    hasDigit ? styles.requirementTextValid : styles.requirementTextInvalid
+                  ]}>
+                    One digit (0-9)
+                  </Text>
+                </View>
+                <View style={styles.requirementItem}>
+                  <Ionicons 
                     name={hasSpecialChar ? "checkmark-circle" : "close-circle"} 
                     size={20} 
                     color={hasSpecialChar ? "#10B981" : "#EF4444"} 
@@ -230,6 +257,7 @@ export default function MasterPasswordScreen() {
                   </Text>
                 </View>
               </View>
+              )}
             </View>
 
             {/* Create Account Button */}
@@ -377,4 +405,5 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
 });
+
 

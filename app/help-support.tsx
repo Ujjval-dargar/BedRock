@@ -45,13 +45,6 @@ export default function HelpSupportScreen() {
       bgColor: '#F5F0FF',
     },
     {
-      icon: 'key',
-      question: 'What if I forget my master password?',
-      answer: 'Use your recovery key to reset your master password. Keep your recovery key safe and never share it.',
-      color: '#3B82F6',
-      bgColor: '#DBEAFE',
-    },
-    {
       icon: 'cloud-upload',
       question: 'How does backup work?',
       answer: 'Your encrypted data is automatically synced to secure cloud storage when enabled. You can access it from any device.',

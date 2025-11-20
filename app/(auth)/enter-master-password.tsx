@@ -195,14 +195,6 @@ export default function LoginMasterPasswordScreen() {
     }
   };
 
-  const handleForgetPassword = async () => {
-    const email = await AsyncStorage.getItem('temp_login_email');
-    router.push({
-      pathname: '/forgot-password-verify',
-      params: { email: email || '' }
-    } as any);
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -248,13 +240,6 @@ export default function LoginMasterPasswordScreen() {
                   />
                 </TouchableOpacity>
               </View>
-              {/* Forget Password Link */}
-              <TouchableOpacity 
-                style={styles.forgetLink}
-                onPress={handleForgetPassword}
-              >
-                <Text style={styles.forgetLinkText}>Forget master Password?</Text>
-              </TouchableOpacity>
             </View>
 
             {/* Unlock Button */}
@@ -361,15 +346,6 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 8,
-  },
-  forgetLink: {
-    alignItems: 'flex-end',
-    marginTop: 16,
-  },
-  forgetLinkText: {
-    fontSize: 15,
-    color: '#6B72FF',
-    fontWeight: '600',
   },
   unlockButton: {
     backgroundColor: '#6B72FF',

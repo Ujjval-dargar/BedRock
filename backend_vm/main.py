@@ -113,7 +113,7 @@ async def resend_verification_code(data: EmailCheckIn):
         raise HTTPException(status_code=500, detail="Failed to resend verification code")
 
 
-@app.post("/signup", response_model=schemas.SignupResponse)
+@app.post("/signup", response_model=schemas.UserOut)
 async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
     existing = await crud.get_user_by_email(db, data.email.lower())
     if existing:
@@ -136,10 +136,6 @@ async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
     priv_pem, pub_pem = crypto.generate_rsa_keypair()
     encrypted_priv = crypto.aes_encrypt(vault_key, priv_pem)
 
-    # generate recovery key and hash it (same as password)
-    recovery_key = crypto.generate_recovery_key()
-    recovery_key_hash = auth.hash_password(recovery_key)
-
     user = models.User(
         username=data.username,
         email=data.email.lower(),
@@ -148,18 +144,17 @@ async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
         vault_salt=salt,
         public_key_pem=pub_pem.decode(),
         encrypted_private_key=encrypted_priv,
-        recovery_key_hash=recovery_key_hash,
     )
 
     created = await crud.create_user(db, user)
     
-    # Return user data with recovery key (only shown once!)
-    return schemas.SignupResponse(
+    # Return user data
+    return schemas.UserOut(
         id=created.id,
         username=created.username,
         email=created.email,
         biometric_enabled=created.biometric_enabled,
-        recovery_key=recovery_key  # Plain text - user must save this!
+        is_first_login=created.is_first_login
     )
 
 
@@ -181,48 +176,6 @@ async def login(payload: schemas.LoginIn, db: AsyncSession = Depends(get_session
         "public_key_pem": user.public_key_pem,
         "is_first_login": user.is_first_login
     })
-
-
-@app.post("/verify-recovery-key")
-async def verify_recovery_key(data: schemas.RecoveryKeyVerify, db: AsyncSession = Depends(get_session)):
-    """
-    Verify recovery key for password reset flow.
-    Returns success if recovery key matches, allowing user to proceed to password reset.
-    """
-    user = await crud.get_user_by_email(db, data.email.lower())
-    if not user:
-        raise HTTPException(status_code=400, detail="Email not found")
-    
-    if not user.recovery_key_hash:
-        raise HTTPException(status_code=400, detail="No recovery key set for this account")
-    
-    # Verify recovery key against stored hash
-    if not auth.verify_password(data.recovery_key, user.recovery_key_hash):
-        raise HTTPException(status_code=400, detail="Invalid recovery key")
-    
-    return {"message": "Recovery key verified successfully", "email": user.email}
-
-
-@app.post("/reset-password")
-async def reset_password(data: schemas.PasswordReset, db: AsyncSession = Depends(get_session)):
-    """
-    Reset user's master password after recovery key verification.
-    This updates the master password hash in the database.
-    Note: User will need to re-create vault key and re-encrypt all passwords with new master password.
-    """
-    user = await crud.get_user_by_email(db, data.email.lower())
-    if not user:
-        raise HTTPException(status_code=400, detail="Email not found")
-    
-    # Hash the new master password
-    new_password_hash = auth.hash_password(data.new_master_password)
-    
-    # Update user's master password hash
-    user.master_password_hash = new_password_hash
-    db.add(user)
-    await db.commit()
-    
-    return {"message": "Password reset successfully"}
 
 
 @app.get("/me", response_model=schemas.UserOut)

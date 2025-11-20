@@ -32,15 +32,6 @@ const securityOptions: SecurityOption[] = [
     accentBackground: '#F5F0FF',
     route: '/(security)/change-master-password',
   },
-  {
-    id: 'recovery-key',
-    icon: 'shield-checkmark',
-    title: 'View Recovery Key',
-    subtitle: 'View your account recovery key',
-    accentColor: '#10B981',
-    accentBackground: '#D1FAE5',
-    route: '/(security)/view-recovery-key',
-  },
 ];
 
 export default function AccountSecurityScreen() {
