@@ -54,7 +54,7 @@ export default function LoginMasterPasswordScreen() {
         setBiometricEnabled(true); // Show the button, backend will validate
       }
     } catch (error) {
-      console.error('Error checking biometric:', error);
+      // Silently fail biometric check
     }
   };
 
@@ -133,7 +133,6 @@ export default function LoginMasterPasswordScreen() {
       // Biometric is enabled, proceed with fingerprint prompt
       await handleBiometricLogin();
     } catch (error: any) {
-      console.error('Error checking biometric status:', error);
       Alert.alert('Error', 'Failed to verify biometric status. Please try again.');
     }
   };
@@ -179,8 +178,6 @@ export default function LoginMasterPasswordScreen() {
       // Navigate to home screen
       router.replace('/(tabs)/home' as any);
     } catch (error: any) {
-      console.error('Biometric login error:', error);
-      
       // Check if error is due to biometric not being enabled
       if (error.message?.includes('not enabled')) {
         Alert.alert(
@@ -188,7 +185,7 @@ export default function LoginMasterPasswordScreen() {
           'Biometric authentication is not enabled for this account. Please enable it in Settings after logging in.'
         );
       } else {
-        Alert.alert('Error', error.message || 'Biometric authentication failed');
+        Alert.alert('Error', 'Biometric authentication failed');
       }
     } finally {
       setIsLoading(false);

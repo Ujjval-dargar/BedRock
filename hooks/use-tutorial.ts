@@ -27,7 +27,7 @@ export function useTutorial() {
         tutorialCompleted = false;
       }
     } catch (error) {
-      console.error('Error checking tutorial status:', error);
+      // Silently handle error
       if (tutorialCompleted) {
         setShowTutorial(false);
       } else {
@@ -45,7 +45,6 @@ export function useTutorial() {
       tutorialCompleted = true;
       setShowTutorial(false);
     } catch (error) {
-      console.error('Error completing tutorial:', error);
       // Even if API fails, mark as completed locally
       tutorialCompleted = true;
       setShowTutorial(false);
@@ -59,7 +58,6 @@ export function useTutorial() {
       tutorialCompleted = true;
       setShowTutorial(false);
     } catch (error) {
-      console.error('Error skipping tutorial:', error);
       // Even if API fails, mark as completed locally
       tutorialCompleted = true;
       setShowTutorial(false);
@@ -87,7 +85,7 @@ export function useTutorial() {
       setShowTutorial(true);
       setCurrentStep(1);
     } catch (error) {
-      console.error('Error resetting tutorial:', error);
+      // Silently handle error
       tutorialCompleted = false;
       setShowTutorial(true);
       setCurrentStep(1);

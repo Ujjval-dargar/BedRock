@@ -81,7 +81,9 @@ export default function MasterPasswordScreen() {
       // Get email from previous screen
       const email = await AsyncStorage.getItem('temp_signup_email');
       if (!email) {
-        throw new Error('Email not found');
+        Alert.alert('Error', 'Session expired. Please start again.');
+        router.replace('/(auth)/signup' as any);
+        return;
       }
 
       // Store signup data temporarily for later steps
@@ -91,7 +93,7 @@ export default function MasterPasswordScreen() {
       // Navigate to email verification
       router.push('/(security)/email-verification' as any);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to proceed');
+      Alert.alert('Error', 'Failed to proceed. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -53,10 +53,8 @@ export default function VerificationScreen() {
   const sendVerificationCode = async (emailAddress: string) => {
     try {
       setIsSending(true);
-      const response = await authAPI.sendVerificationCode(emailAddress);
-      console.log('✓ Verification code sent:', response.message);
+      await authAPI.sendVerificationCode(emailAddress);
     } catch (error: any) {
-      console.error('Failed to send verification code:', error);
       Alert.alert(
         'Notice',
         'We had trouble sending the verification code via email. For testing, you can use any 6-digit code.',
@@ -84,13 +82,11 @@ export default function VerificationScreen() {
       const response = await authAPI.verifyEmailCode(email, code);
       
       if (response.verified) {
-        console.log('✓ Email verified successfully');
-        
         // Complete the signup process
         await completeSignup();
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Invalid or expired verification code');
+      Alert.alert('Error', 'Invalid or expired verification code');
       setIsLoading(false);
     }
   };
@@ -102,7 +98,9 @@ export default function VerificationScreen() {
       const masterPassword = await AsyncStorage.getItem('temp_signup_master_password');
 
       if (!email || !username || !masterPassword) {
-        throw new Error('Signup data not found. Please start again.');
+        Alert.alert('Error', 'Session expired. Please start signup again.');
+        router.replace('/(auth)/signup' as any);
+        return;
       }
 
       // Call signup API to create the account
@@ -147,16 +145,15 @@ export default function VerificationScreen() {
 
     try {
       setIsSending(true);
-      const response = await authAPI.resendVerificationCode(email);
+      await authAPI.resendVerificationCode(email);
       
       // Reset timer and disable resend button
       setResendTimer(30);
       setCanResend(false);
       
       Alert.alert('✓ Code Resent', 'Verification code has been resent to your email successfully');
-      console.log('✓ Verification code resent:', response.message);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to resend code');
+      Alert.alert('Error', 'Failed to resend code');
     } finally {
       setIsSending(false);
     }

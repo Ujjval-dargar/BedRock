@@ -11,19 +11,8 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
-        {/* Authentication Screens */}
         <Stack.Screen name="index" />
         <Stack.Screen name="welcome" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="signup" />
-        <Stack.Screen name="verification" />
-        <Stack.Screen name="master-password" />
-        <Stack.Screen name="login-master-password" />
-        <Stack.Screen name="forgot-password" />
-        <Stack.Screen name="forgot-password-reset" />
-        <Stack.Screen name="authentication-key" />
-        
-        {/* Main App Screens */}
         <Stack.Screen 
           name="(tabs)" 
           options={{ 
@@ -31,14 +20,11 @@ export default function RootLayout() {
             headerShown: false 
           }} 
         />
-        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-        <Stack.Screen name="create-password" />
-        <Stack.Screen name="edit-password" />
-        <Stack.Screen name="view-password" />
-        <Stack.Screen name="duplicate-passwords" />
-        <Stack.Screen name="leaked-passwords" />
-        <Stack.Screen name="safe-passwords" />
-        <Stack.Screen name="weak-passwords" />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="about" />
+        <Stack.Screen name="help-support" />
+        <Stack.Screen name="privacy-policy" />
+        <Stack.Screen name="terms-of-service" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

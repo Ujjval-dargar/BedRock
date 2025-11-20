@@ -21,8 +21,6 @@ const getApiUrl = () => {
 
 const API_BASE_URL = getApiUrl() || API_CONFIG.BASE_URL;
 
-console.log('🔗 API Base URL:', API_BASE_URL);
-
 // Storage keys
 export const STORAGE_KEYS = {
   TOKEN: 'auth_token',
@@ -90,7 +88,6 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   }
 
   const url = `${API_BASE_URL}${endpoint}`;
-  console.log('🌐 API Request:', url);
 
   try {
     const response = await fetch(url, {
@@ -98,17 +95,13 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
       headers,
     });
 
-    console.log('📡 API Response:', response.status, endpoint);
-
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      console.error('❌ API Error:', error);
       throw new Error(error.detail || `HTTP ${response.status}`);
     }
 
     return response.json();
   } catch (error) {
-    console.error('🔥 Network Error:', error);
     throw error;
   }
 }
@@ -127,17 +120,14 @@ export const authAPI = {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('📧 Email check:', data.exists ? 'Already registered' : 'Available');
         return { exists: data.exists };
       }
 
       // If endpoint fails, fall back to allowing signup (don't block users)
-      console.log('⚠ Email check endpoint error, allowing signup');
       return { exists: false };
       
     } catch (error: any) {
       // Network errors - assume email is available to not block signup
-      console.log('⚠ Network error during email check, allowing signup');
       return { exists: false };
     }
   },
@@ -154,17 +144,14 @@ export const authAPI = {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('👤 Username check:', data.exists ? 'Already taken' : 'Available');
         return { exists: data.exists };
       }
 
       // If endpoint fails, fall back to allowing signup (don't block users)
-      console.log('⚠ Username check endpoint error, allowing signup');
       return { exists: false };
       
     } catch (error: any) {
       // Network errors - assume username is available to not block signup
-      console.log('⚠ Network error during username check, allowing signup');
       return { exists: false };
     }
   },
@@ -207,7 +194,7 @@ export const authAPI = {
       const user = await fetchAPI('/me');
       await AsyncStorage.setItem(STORAGE_KEYS.USER_ID, user.id.toString());
     } catch (error) {
-      console.error('Failed to fetch user ID:', error);
+      // Silently fail - ID will be fetched on next request if needed
     }
 
     return response;
@@ -244,7 +231,7 @@ export const authAPI = {
       const user = await fetchAPI('/me');
       await AsyncStorage.setItem(STORAGE_KEYS.USER_ID, user.id.toString());
     } catch (error) {
-      console.error('Failed to fetch user ID:', error);
+      // Silently fail - ID will be fetched on next request if needed
     }
 
     return response;
@@ -353,7 +340,6 @@ export const authAPI = {
 
       return { valid: response.ok };
     } catch (error) {
-      console.error('Error verifying master password:', error);
       return { valid: false };
     }
   },
