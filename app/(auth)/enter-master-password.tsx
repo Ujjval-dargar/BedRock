@@ -20,11 +20,143 @@ export default function LoginMasterPasswordScreen() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricType, setBiometricType] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockoutTime, setLockoutTime] = useState(0);
+  const [remainingTime, setRemainingTime] = useState(0);
+
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_DURATION = 300; // 5 minutes in seconds
 
   // Check biometric availability and auto-login on mount
   useEffect(() => {
     checkBiometricAndAutoLogin();
+    checkLockoutStatus();
   }, []);
+
+  // Timer for lockout countdown
+  useEffect(() => {
+    if (isLocked && remainingTime > 0) {
+      const timer = setInterval(() => {
+        const now = Date.now();
+        const timeLeft = Math.max(0, Math.ceil((lockoutTime - now) / 1000));
+        setRemainingTime(timeLeft);
+        
+        if (timeLeft === 0) {
+          setIsLocked(false);
+          setFailedAttempts(0);
+          clearLockoutData();
+        }
+      }, 1000);
+      
+      return () => clearInterval(timer);
+    }
+  }, [isLocked, remainingTime, lockoutTime]);
+
+  const checkLockoutStatus = async () => {
+    try {
+      const email = await AsyncStorage.getItem('temp_login_email');
+      if (!email) return;
+
+      const lockoutKey = `lockout_${email}`;
+      const attemptsKey = `failed_attempts_${email}`;
+      
+      const lockoutData = await AsyncStorage.getItem(lockoutKey);
+      const attemptsData = await AsyncStorage.getItem(attemptsKey);
+      
+      if (lockoutData) {
+        const lockoutTimestamp = parseInt(lockoutData, 10);
+        const now = Date.now();
+        
+        if (now < lockoutTimestamp) {
+          setIsLocked(true);
+          setLockoutTime(lockoutTimestamp);
+          const timeLeft = Math.ceil((lockoutTimestamp - now) / 1000);
+          setRemainingTime(timeLeft);
+        } else {
+          await clearLockoutData();
+        }
+      }
+      
+      if (attemptsData) {
+        setFailedAttempts(parseInt(attemptsData, 10));
+      }
+    } catch (error) {
+      console.error('Error checking lockout status:', error);
+    }
+  };
+
+  const clearLockoutData = async () => {
+    try {
+      const email = await AsyncStorage.getItem('temp_login_email');
+      if (!email) return;
+
+      const lockoutKey = `lockout_${email}`;
+      const attemptsKey = `failed_attempts_${email}`;
+      
+      await AsyncStorage.removeItem(lockoutKey);
+      await AsyncStorage.removeItem(attemptsKey);
+    } catch (error) {
+      console.error('Error clearing lockout data:', error);
+    }
+  };
+
+  const recordFailedAttempt = async () => {
+    try {
+      const email = await AsyncStorage.getItem('temp_login_email');
+      if (!email) return;
+
+      const newAttempts = failedAttempts + 1;
+      setFailedAttempts(newAttempts);
+      
+      const attemptsKey = `failed_attempts_${email}`;
+      await AsyncStorage.setItem(attemptsKey, newAttempts.toString());
+      
+      if (newAttempts >= MAX_ATTEMPTS) {
+        const lockoutTimestamp = Date.now() + (LOCKOUT_DURATION * 1000);
+        const lockoutKey = `lockout_${email}`;
+        
+        await AsyncStorage.setItem(lockoutKey, lockoutTimestamp.toString());
+        
+        setIsLocked(true);
+        setLockoutTime(lockoutTimestamp);
+        setRemainingTime(LOCKOUT_DURATION);
+        
+        Alert.alert(
+          'Account Temporarily Locked',
+          `Too many failed attempts. Please try again in ${Math.ceil(LOCKOUT_DURATION / 60)} minutes.`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        const remainingAttempts = MAX_ATTEMPTS - newAttempts;
+        Alert.alert(
+          'Invalid Password',
+          `Incorrect master password. ${remainingAttempts} attempt${remainingAttempts !== 1 ? 's' : ''} remaining before temporary lockout.`
+        );
+      }
+    } catch (error) {
+      console.error('Error recording failed attempt:', error);
+    }
+  };
+
+  const resetFailedAttempts = async () => {
+    try {
+      const email = await AsyncStorage.getItem('temp_login_email');
+      if (!email) return;
+
+      setFailedAttempts(0);
+      const attemptsKey = `failed_attempts_${email}`;
+      await AsyncStorage.removeItem(attemptsKey);
+    } catch (error) {
+      console.error('Error resetting failed attempts:', error);
+    }
+  };
+
+  const formatLockoutTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const checkBiometricAndAutoLogin = async () => {
     try {
@@ -64,6 +196,14 @@ export default function LoginMasterPasswordScreen() {
       return;
     }
 
+    if (isLocked) {
+      Alert.alert(
+        'Account Locked',
+        `Too many failed attempts. Please try again in ${formatLockoutTime(remainingTime)}.`
+      );
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -86,13 +226,14 @@ export default function LoginMasterPasswordScreen() {
       // Store vault key securely
       await storageAPI.setVaultKey(vaultKey);
       
-      // Clear temporary email
+      // Clear temporary email and reset failed attempts
       await AsyncStorage.removeItem('temp_login_email');
+      await resetFailedAttempts();
       
       // Navigate to home screen
       router.replace('/(tabs)/home' as any);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Invalid master password');
+      await recordFailedAttempt();
     } finally {
       setIsLoading(false);
     }
@@ -206,7 +347,7 @@ export default function LoginMasterPasswordScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
@@ -227,9 +368,29 @@ export default function LoginMasterPasswordScreen() {
               Please enter your master password
             </Text>
 
+            {/* Lockout Warning */}
+            {isLocked && (
+              <View style={styles.lockoutBanner}>
+                <Ionicons name="lock-closed" size={20} color="#DC2626" />
+                <Text style={styles.lockoutText}>
+                  Account locked. Try again in {formatLockoutTime(remainingTime)}
+                </Text>
+              </View>
+            )}
+
+            {/* Failed Attempts Warning */}
+            {!isLocked && failedAttempts > 0 && (
+              <View style={styles.warningBanner}>
+                <Ionicons name="warning" size={18} color="#F59E0B" />
+                <Text style={styles.warningText}>
+                  {MAX_ATTEMPTS - failedAttempts} attempt{MAX_ATTEMPTS - failedAttempts !== 1 ? 's' : ''} remaining
+                </Text>
+              </View>
+            )}
+
             {/* Input Field */}
             <View style={styles.inputContainer}>
-              <View style={styles.inputWrapper}>
+              <View style={[styles.inputWrapper, isLocked && styles.inputDisabled]}>
                 <TextInput
                   style={styles.input}
                   placeholder="Master Password"
@@ -239,15 +400,17 @@ export default function LoginMasterPasswordScreen() {
                   secureTextEntry={!showMasterPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!isLocked}
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
                   onPress={() => setShowMasterPassword(!showMasterPassword)}
+                  disabled={isLocked}
                 >
                   <Ionicons
                     name={showMasterPassword ? 'eye-off' : 'eye'}
                     size={20}
-                    color="#626262"
+                    color={isLocked ? "#CCC" : "#626262"}
                   />
                 </TouchableOpacity>
               </View>
@@ -255,12 +418,15 @@ export default function LoginMasterPasswordScreen() {
 
             {/* Unlock Button */}
             <TouchableOpacity
-              style={[styles.unlockButton, isLoading && styles.unlockButtonDisabled]}
+              style={[
+                styles.unlockButton, 
+                (isLoading || isLocked) && styles.unlockButtonDisabled
+              ]}
               onPress={handleUnlock}
-              disabled={isLoading}
+              disabled={isLoading || isLocked}
             >
               <Text style={styles.unlockButtonText}>
-                {isLoading ? 'Processing...' : 'Unlock'}
+                {isLoading ? 'Processing...' : isLocked ? 'Locked' : 'Unlock'}
               </Text>
             </TouchableOpacity>
 
@@ -287,7 +453,7 @@ export default function LoginMasterPasswordScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -322,9 +488,47 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#6B7280',
     textAlign: 'center',
-    marginBottom: 48,
+    marginBottom: 24,
     lineHeight: 24,
     paddingHorizontal: 8,
+  },
+  lockoutBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEE2E2',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    gap: 8,
+  },
+  lockoutText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
+    flex: 1,
+    textAlign: 'center',
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    gap: 8,
+  },
+  warningText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#D97706',
   },
   inputContainer: {
     marginBottom: 24,
@@ -347,6 +551,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
+  },
+  inputDisabled: {
+    backgroundColor: '#F3F4F6',
+    opacity: 0.6,
   },
   input: {
     flex: 1,
