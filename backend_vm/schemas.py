@@ -14,6 +14,7 @@ class UserOut(BaseModel):
     username: str
     email: EmailStr
     biometric_enabled: bool = False
+    is_first_login: bool = True
 
     class Config:
         from_attributes = True
@@ -25,6 +26,7 @@ class SignupResponse(BaseModel):
     username: str
     email: EmailStr
     biometric_enabled: bool = False
+    is_first_login: bool = True
     recovery_key: str  # Plain text recovery key - shown only once!
 
     class Config:

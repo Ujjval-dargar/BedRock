@@ -119,10 +119,9 @@ async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Check if username already exists
-    existing_username = await crud.get_user_by_username(db, data.username)
-    if existing_username:
-        raise HTTPException(status_code=400, detail="Username already taken")
+    # Validate username length (minimum 3 characters)
+    if len(data.username.strip()) < 3:
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
 
     # hash master password for authentication
     hashed = auth.hash_password(data.master_password)
@@ -174,7 +173,14 @@ async def login(payload: schemas.LoginIn, db: AsyncSession = Depends(get_session
 
     # Return a token with user id; do not reveal vault key plain. Client should use master password to derive key and decrypt vault key.
     access_token = auth.create_access_token({"sub": str(user.id)})
-    return JSONResponse({"access_token": access_token, "token_type": "bearer", "encrypted_vault_key": user.encrypted_vault_key.hex(), "vault_salt": user.vault_salt.hex(), "public_key_pem": user.public_key_pem})
+    return JSONResponse({
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "encrypted_vault_key": user.encrypted_vault_key.hex(), 
+        "vault_salt": user.vault_salt.hex(), 
+        "public_key_pem": user.public_key_pem,
+        "is_first_login": user.is_first_login
+    })
 
 
 @app.post("/verify-recovery-key")
@@ -231,11 +237,10 @@ async def update_me(
     db: AsyncSession = Depends(get_session)
 ):
     """Update current user's username and/or email."""
-    # Check if username is being changed and if it's already taken
+    # Update username if provided (minimum 3 characters)
     if user_update.username and user_update.username != current.username:
-        existing = await crud.get_user_by_username(db, user_update.username)
-        if existing:
-            raise HTTPException(status_code=400, detail="Username already taken")
+        if len(user_update.username.strip()) < 3:
+            raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
         current.username = user_update.username
     
     # Check if email is being changed and if it's already registered
@@ -248,6 +253,15 @@ async def update_me(
     # Update the user in database
     updated_user = await crud.update_user(db, current)
     return updated_user
+
+
+@app.post("/complete-tutorial")
+async def complete_tutorial(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    """Mark tutorial as completed for the user (set is_first_login to False)"""
+    current.is_first_login = False
+    db.add(current)
+    await db.commit()
+    return {"message": "Tutorial completed", "is_first_login": False}
 
 
 # Biometric endpoints
@@ -368,7 +382,8 @@ async def biometric_login(
         "encrypted_vault_key": user.encrypted_vault_key.hex(),
         "vault_salt": user.vault_salt.hex(),
         "public_key_pem": user.public_key_pem,
-        "master_password_hash": user.master_password_hash  # Client needs this to derive vault key
+        "master_password_hash": user.master_password_hash,  # Client needs this to derive vault key
+        "is_first_login": user.is_first_login
     })
 
 

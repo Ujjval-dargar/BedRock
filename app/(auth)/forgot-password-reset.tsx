@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authAPI } from '../../utils/api';
+import { PasswordStrengthIndicator } from '../../components/password-strength-indicator';
 
 export default function ForgotPasswordResetScreen() {
   const params = useLocalSearchParams();
@@ -15,19 +16,41 @@ export default function ForgotPasswordResetScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Password validation function
+  const validatePassword = (password: string): { isValid: boolean; message: string } => {
+    if (password.length < 8) {
+      return { isValid: false, message: 'Password must be at least 8 characters' };
+    }
+    if (!/[A-Z]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one uppercase letter' };
+    }
+    if (!/[a-z]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one lowercase letter' };
+    }
+    if (!/[0-9]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one number' };
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one special character (!@#$%^&*)' };
+    }
+    return { isValid: true, message: '' };
+  };
+
   const handleResetPassword = async () => {
     if (!newPassword.trim() || !confirmPassword.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+    // Validate password strength
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      Alert.alert('Weak Password', passwordValidation.message);
       return;
     }
 
-    if (newPassword.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
@@ -61,8 +84,10 @@ export default function ForgotPasswordResetScreen() {
     }
   };
 
+  const SAView: any = SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SAView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -106,6 +131,11 @@ export default function ForgotPasswordResetScreen() {
                 </TouchableOpacity>
               </View>
 
+              {/* Password Strength Indicator */}
+              {newPassword.length > 0 && (
+                <PasswordStrengthIndicator password={newPassword} />
+              )}
+
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
@@ -143,7 +173,7 @@ export default function ForgotPasswordResetScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SAView>
   );
 }
 

@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../utils/api';
+import { PasswordStrengthIndicator } from '../../components/password-strength-indicator';
 
 export default function MasterPasswordScreen() {
   const [username, setUsername] = useState('');
@@ -14,9 +15,42 @@ export default function MasterPasswordScreen() {
   const [showConfirmMasterPassword, setShowConfirmMasterPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Password validation function
+  const validatePassword = (password: string): { isValid: boolean; message: string } => {
+    if (password.length < 8) {
+      return { isValid: false, message: 'Password must be at least 8 characters' };
+    }
+    if (!/[A-Z]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one uppercase letter' };
+    }
+    if (!/[a-z]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one lowercase letter' };
+    }
+    if (!/[0-9]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one number' };
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one special character (!@#$%^&*)' };
+    }
+    return { isValid: true, message: '' };
+  };
+
   const handleCreateAccount = async () => {
     if (!username.trim() || !masterPassword.trim() || !confirmMasterPassword.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    // Validate username length (minimum 3 characters)
+    if (username.trim().length < 3) {
+      Alert.alert('Error', 'Username must be at least 3 characters');
+      return;
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(masterPassword);
+    if (!passwordValidation.isValid) {
+      Alert.alert('Weak Password', passwordValidation.message);
       return;
     }
 
@@ -25,26 +59,9 @@ export default function MasterPasswordScreen() {
       return;
     }
 
-    if (masterPassword.length < 8) {
-      Alert.alert('Error', 'Master password must be at least 8 characters');
-      return;
-    }
-
     setIsLoading(true);
     
     try {
-      // Check if username is already taken
-      const usernameCheck = await authAPI.checkUsername(username);
-      if (usernameCheck.exists) {
-        Alert.alert(
-          'Username Taken',
-          'This username is already in use. Please choose a different username.',
-          [{ text: 'OK' }]
-        );
-        setIsLoading(false);
-        return;
-      }
-
       // Get email from previous screen
       const email = await AsyncStorage.getItem('temp_signup_email');
       if (!email) {
@@ -64,8 +81,10 @@ export default function MasterPasswordScreen() {
     }
   };
 
+  const SAView: any = SafeAreaView;
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SAView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -121,6 +140,11 @@ export default function MasterPasswordScreen() {
                 </TouchableOpacity>
               </View>
 
+              {/* Password Strength Indicator */}
+              {masterPassword.length > 0 && (
+                <PasswordStrengthIndicator password={masterPassword} />
+              )}
+
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
@@ -158,7 +182,7 @@ export default function MasterPasswordScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SAView>
   );
 }
 
