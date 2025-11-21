@@ -182,6 +182,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 16,
+    overflow: 'hidden',
   },
   header: {
     alignItems: 'center',
