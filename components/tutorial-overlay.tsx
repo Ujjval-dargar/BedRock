@@ -228,12 +228,12 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
     width: '100%',
   },
   primaryButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -242,7 +242,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: '#6F6BF5',
     borderRadius: 12,
-    minWidth: 100,
   },
   primaryButtonFull: {
     flex: 1,
@@ -256,6 +255,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   secondaryButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -264,7 +264,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
-    minWidth: 100,
   },
   secondaryButtonText: {
     fontSize: 16,
@@ -274,9 +273,12 @@ const styles = StyleSheet.create({
   skipButton: {
     paddingVertical: 14,
     paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   skipButtonFirst: {
-    marginRight: 'auto',
+    flex: 1,
+    alignItems: 'flex-start',
   },
   skipButtonText: {
     fontSize: 14,
