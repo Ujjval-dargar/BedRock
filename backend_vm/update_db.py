@@ -1,18 +1,11 @@
-#!/usr/bin/env python3
-"""
-Update database schema to add permission column to shared_passwords table.
-Run this after updating the model to add the permission field.
-"""
 import asyncio
 import sys
 from sqlalchemy import text
 from database import engine
 
 async def update_schema():
-    """Add permission column to shared_passwords table if it doesn't exist."""
     try:
         async with engine.begin() as conn:
-            # Check if column exists
             result = await conn.execute(text(
                 "SELECT COUNT(*) FROM pragma_table_info('shared_passwords') WHERE name='permission'"
             ))
@@ -27,7 +20,6 @@ async def update_schema():
             else:
                 print("✓ Permission column already exists")
                 
-            # Update existing rows to have 'view' permission if NULL
             await conn.execute(text(
                 "UPDATE shared_passwords SET permission = 'view' WHERE permission IS NULL"
             ))

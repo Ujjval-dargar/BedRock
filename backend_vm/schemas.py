@@ -51,7 +51,6 @@ class UsernameCheckIn(BaseModel):
 class PasswordEntryCreate(BaseModel):
     title: str
     username: Optional[str] = None
-    # encrypted blob base64 (binary) - client must encrypt locally
     encrypted_password: bytes
     url: Optional[str] = None
     category: Optional[str] = None
@@ -79,7 +78,7 @@ class ShareCreate(BaseModel):
     encrypted_key_for_recipient: bytes
     encrypted_password: bytes
     encrypted_message: Optional[bytes] = None
-    permission: Optional[str] = "view"  # 'view' or 'edit'
+    permission: Optional[str] = "view" 
 
 
 class ShareOut(BaseModel):

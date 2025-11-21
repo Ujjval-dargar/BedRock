@@ -10,18 +10,12 @@ class User(Base):
     username = Column(String(50), nullable=False, index=True)
     email = Column(String(200), unique=True, nullable=False, index=True)
     master_password_hash = Column(String(512), nullable=False)
-    # vault key encrypted with key derived from master password
     encrypted_vault_key = Column(LargeBinary, nullable=False)
     vault_salt = Column(LargeBinary, nullable=False)
-    # RSA public key stored plaintext (public)
     public_key_pem = Column(Text, nullable=False)
-    # Private key encrypted with vault key
     encrypted_private_key = Column(LargeBinary, nullable=False)
-    # Biometric authentication enabled flag
     biometric_enabled = Column(Boolean, default=False, nullable=False)
-    # Device ID for biometric authentication (binds biometric to specific device)
     biometric_device_id = Column(String(200), nullable=True)
-    # First login flag (True = show tutorial, False = skip tutorial)
     is_first_login = Column(Boolean, default=True, nullable=False)
 
     password_entries = relationship("PasswordEntry", back_populates="owner")
@@ -35,7 +29,6 @@ class PasswordEntry(Base):
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     title = Column(String(200), nullable=False)
     username = Column(String(200), nullable=True)
-    # encrypted blob (clients should encrypt with their vault key before sending)
     encrypted_password = Column(LargeBinary, nullable=False)
     url = Column(String(500), nullable=True)
     category = Column(String(50), nullable=True)
@@ -51,11 +44,8 @@ class SharedPassword(Base):
     entry_id = Column(Integer, ForeignKey("password_entries.id"), nullable=True)
     from_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     to_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    # the encrypted symmetric key for recipient (encrypted with recipient public key)
     encrypted_key_for_recipient = Column(LargeBinary, nullable=False)
-    # carry the encrypted password blob as-is
     encrypted_password = Column(LargeBinary, nullable=False)
-    # optional message from sender (encrypted with shared key)
     encrypted_message = Column(LargeBinary, nullable=True)
     permission = Column(String(20), default="view")  # 'view' or 'edit'
     status = Column(String(50), default="pending")

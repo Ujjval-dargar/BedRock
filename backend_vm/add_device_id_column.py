@@ -1,13 +1,9 @@
-"""
-Migration script to add biometric_device_id column to users table
-"""
 import sqlite3
 
 def add_device_id_column():
     conn = sqlite3.connect('bedrock.db')
     cursor = conn.cursor()
     
-    # Check if column already exists
     cursor.execute("PRAGMA table_info(users)")
     columns = cursor.fetchall()
     column_names = [column[1] for column in columns]
@@ -19,9 +15,9 @@ def add_device_id_column():
             ADD COLUMN biometric_device_id TEXT
         """)
         conn.commit()
-        print("✅ biometric_device_id column added successfully")
+        print("biometric_device_id column added successfully")
     else:
-        print("ℹ️  biometric_device_id column already exists")
+        print("biometric_device_id column already exists")
     
     conn.close()
 
