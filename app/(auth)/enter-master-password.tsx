@@ -139,14 +139,16 @@ export default function LoginMasterPasswordScreen() {
     }
   };
 
-  const resetFailedAttempts = async () => {
+  const resetFailedAttempts = async (userEmail?: string) => {
     try {
-      const email = await AsyncStorage.getItem('temp_login_email');
+      const email = userEmail || await AsyncStorage.getItem('temp_login_email');
       if (!email) return;
 
       setFailedAttempts(0);
       const attemptsKey = `failed_attempts_${email}`;
+      const lockoutKey = `lockout_${email}`;
       await AsyncStorage.removeItem(attemptsKey);
+      await AsyncStorage.removeItem(lockoutKey);
     } catch (error) {
       console.error('Error resetting failed attempts:', error);
     }
@@ -226,9 +228,11 @@ export default function LoginMasterPasswordScreen() {
       // Store vault key securely
       await storageAPI.setVaultKey(vaultKey);
       
-      // Clear temporary email and reset failed attempts
+      // Reset failed attempts BEFORE clearing temporary email
+      await resetFailedAttempts(email);
+      
+      // Clear temporary email
       await AsyncStorage.removeItem('temp_login_email');
-      await resetFailedAttempts();
       
       // Navigate to home screen
       router.replace('/(tabs)/home' as any);
@@ -312,7 +316,10 @@ export default function LoginMasterPasswordScreen() {
       // Store vault key securely
       await storageAPI.setVaultKey(vaultKey);
       
-      // Clear temporary email and biometric flag
+      // Reset failed attempts BEFORE clearing temporary email
+      await resetFailedAttempts(currentEmail);
+      
+      // Clear temporary email, biometric flag
       await AsyncStorage.removeItem('temp_login_email');
       await AsyncStorage.removeItem('biometric_authenticated');
       

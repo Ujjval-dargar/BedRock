@@ -110,12 +110,6 @@ export function EditProfileModal({
       newErrors.username = 'Username must be at least 3 characters';
     }
 
-    if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'Invalid email format';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -125,15 +119,15 @@ export function EditProfileModal({
       return;
     }
 
-    // Check if anything changed
-    if (username === currentUsername && email === currentEmail) {
+    // Check if anything changed (only username now)
+    if (username === currentUsername) {
       Alert.alert('No Changes', 'No changes were made to your profile.');
       return;
     }
 
     setLoading(true);
     try {
-      await onSave(username.trim(), email.trim());
+      await onSave(username.trim(), currentEmail); // Always use current email
       handleClose();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to update profile. Please try again.');
@@ -186,19 +180,10 @@ export function EditProfileModal({
 
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={[styles.input, errors.email && styles.inputError]}
-                  value={email}
-                  onChangeText={(text: string) => {
-                    setEmail(text);
-                    setErrors((prev) => ({ ...prev, email: undefined }));
-                  }}
-                  placeholder="Enter email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  editable={!loading}
-                />
-                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+                <View style={[styles.input, styles.inputDisabled]}>
+                  <Text style={styles.disabledText}>{email}</Text>
+                </View>
+                <Text style={styles.helperText}>Email cannot be changed</Text>
               </View>
             </View>
 
@@ -298,6 +283,19 @@ const styles = StyleSheet.create({
     color: '#333',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+  },
+  inputDisabled: {
+    backgroundColor: '#F3F4F6',
+    opacity: 0.7,
+  },
+  disabledText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 4,
   },
   inputError: {
     borderColor: '#EF4444',
