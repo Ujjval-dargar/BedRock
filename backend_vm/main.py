@@ -147,13 +147,22 @@ async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
     )
 
 
+@app.post("/verify-email-exists")
+async def verify_email_exists(data: EmailCheckIn, db: AsyncSession = Depends(get_session)):
+    """Check if email is registered without counting as a login attempt"""
+    user = await crud.get_user_by_email(db, data.email.lower())
+    if not user:
+        raise HTTPException(status_code=404, detail="Email not registered")
+    return {"exists": True, "email": data.email.lower()}
+
+
 @app.post("/login")
 async def login(payload: schemas.LoginIn, db: AsyncSession = Depends(get_session)):
     user = await crud.get_user_by_email(db, payload.email.lower())
     if not user:
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        raise HTTPException(status_code=404, detail="Email not registered")
     if not auth.verify_password(payload.master_password, user.master_password_hash):
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        raise HTTPException(status_code=401, detail="Incorrect master password")
 
     access_token = auth.create_access_token({"sub": str(user.id)})
     return JSONResponse({

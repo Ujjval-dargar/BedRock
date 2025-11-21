@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { API_CONFIG } from '../../config';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -25,11 +26,26 @@ export default function LoginScreen() {
     setIsLoading(true);
     
     try {
+      // Check if email is registered before proceeding
+      const response = await fetch(`${API_CONFIG.BASE_URL}/verify-email-exists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase() }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          Alert.alert('Email Not Found', 'This email is not registered. Please sign up first.');
+          return;
+        }
+        throw new Error('Failed to verify email');
+      }
+
       // Store email temporarily for use in master password screen
-      await AsyncStorage.setItem('temp_login_email', email);
+      await AsyncStorage.setItem('temp_login_email', email.toLowerCase());
       router.push('/(auth)/enter-master-password' as any);
     } catch (error) {
-      Alert.alert('Error', 'Failed to proceed with login');
+      Alert.alert('Error', 'Failed to verify email. Please try again.');
     } finally {
       setIsLoading(false);
     }

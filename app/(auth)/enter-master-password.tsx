@@ -124,14 +124,14 @@ export default function LoginMasterPasswordScreen() {
         
         Alert.alert(
           'Account Temporarily Locked',
-          `Too many failed attempts. Please try again in ${Math.ceil(LOCKOUT_DURATION / 60)} minutes.`,
+          `Too many failed password attempts. Please try again in ${Math.ceil(LOCKOUT_DURATION / 60)} minutes.`,
           [{ text: 'OK' }]
         );
       } else {
         const remainingAttempts = MAX_ATTEMPTS - newAttempts;
         Alert.alert(
-          'Invalid Password',
-          `Incorrect master password. ${remainingAttempts} attempt${remainingAttempts !== 1 ? 's' : ''} remaining before temporary lockout.`
+          'Incorrect Master Password',
+          `Wrong password. ${remainingAttempts} attempt${remainingAttempts !== 1 ? 's' : ''} remaining before temporary lockout.`
         );
       }
     } catch (error) {
@@ -237,7 +237,16 @@ export default function LoginMasterPasswordScreen() {
       // Navigate to home screen
       router.replace('/(tabs)/home' as any);
     } catch (error: any) {
-      await recordFailedAttempt();
+      // Only record failed attempt if it's an incorrect password (401)
+      // Don't record if email not found (404) - that should never happen at this point
+      if (error.response?.status === 401 || error.message?.includes('Incorrect master password')) {
+        await recordFailedAttempt();
+      } else if (error.response?.status === 404 || error.message?.includes('Email not registered')) {
+        Alert.alert('Error', 'Email not found. Please go back and verify your email.');
+        router.back();
+      } else {
+        Alert.alert('Error', 'Failed to login. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
