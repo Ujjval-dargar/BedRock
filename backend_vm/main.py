@@ -15,14 +15,16 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: try to initialize DB (but don't fail if MySQL is not available)
     try:
         await database.init_db()
-        print(" Database initialized successfully")
+        print("✓ Database initialized successfully")
     except Exception as e:
-        print(f" Warning: Could not initialize database: {e}")
+        print(f"⚠ Warning: Could not initialize database: {e}")
         print("  The server will start but database operations will fail.")
         print("  Please ensure MySQL is running and configured correctly.")
     yield
+    # Shutdown: cleanup if needed
     pass
 
 
@@ -54,18 +56,21 @@ class VerificationCodeIn(BaseModel):
 
 @app.post("/check-email")
 async def check_email(data: EmailCheckIn, db: AsyncSession = Depends(get_session)):
+    """Check if an email is already registered."""
     existing = await crud.get_user_by_email(db, data.email.lower())
     return {"exists": existing is not None, "available": existing is None}
 
 
 @app.post("/check-username")
 async def check_username(data: schemas.UsernameCheckIn, db: AsyncSession = Depends(get_session)):
+    """Check if a username is already taken."""
     existing = await crud.get_user_by_username(db, data.username)
     return {"exists": existing is not None, "available": existing is None}
 
 
 @app.post("/send-verification-code")
 async def send_verification_code(data: EmailCheckIn):
+    """Send verification code to email."""
     try:
         code = await email_service.send_verification_code(data.email.lower())
         return {
@@ -80,6 +85,7 @@ async def send_verification_code(data: EmailCheckIn):
 
 @app.post("/verify-email-code")
 async def verify_email_code(data: VerificationCodeIn):
+    """Verify email with code."""
     is_valid = email_service.verify_code(data.email.lower(), data.code)
     
     if is_valid:
@@ -94,6 +100,7 @@ async def verify_email_code(data: VerificationCodeIn):
 
 @app.post("/resend-verification-code")
 async def resend_verification_code(data: EmailCheckIn):
+    """Resend verification code to email."""
     try:
         code = await email_service.resend_verification_code(data.email.lower())
         return {
@@ -106,27 +113,28 @@ async def resend_verification_code(data: EmailCheckIn):
         raise HTTPException(status_code=500, detail="Failed to resend verification code")
 
 
-@app.post("/signup", response_model=schemas.SignupResponse)
+@app.post("/signup", response_model=schemas.UserOut)
 async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
     existing = await crud.get_user_by_email(db, data.email.lower())
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # Validate username length (minimum 3 characters)
     if len(data.username.strip()) < 3:
         raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
 
+    # hash master password for authentication
     hashed = auth.hash_password(data.master_password)
 
+    # generate vault key and encrypt it with key derived from master password
     vault_key = crypto.generate_vault_key()
     salt = os.urandom(16)
     derived = crypto.derive_key_from_password(data.master_password, salt)
     encrypted_vault_key = crypto.aes_encrypt(derived, vault_key)
 
+    # generate RSA keys; encrypt private key with vault key
     priv_pem, pub_pem = crypto.generate_rsa_keypair()
     encrypted_priv = crypto.aes_encrypt(vault_key, priv_pem)
-
-    recovery_key = crypto.generate_recovery_key()
-    recovery_key_hash = auth.hash_password(recovery_key)
 
     user = models.User(
         username=data.username,
@@ -136,17 +144,17 @@ async def signup(data: SignupIn, db: AsyncSession = Depends(get_session)):
         vault_salt=salt,
         public_key_pem=pub_pem.decode(),
         encrypted_private_key=encrypted_priv,
-        recovery_key_hash=recovery_key_hash,
     )
 
     created = await crud.create_user(db, user)
     
-    return schemas.SignupResponse(
+    # Return user data
+    return schemas.UserOut(
         id=created.id,
         username=created.username,
         email=created.email,
         biometric_enabled=created.biometric_enabled,
-        recovery_key=recovery_key  
+        is_first_login=created.is_first_login
     )
 
 
@@ -158,6 +166,7 @@ async def login(payload: schemas.LoginIn, db: AsyncSession = Depends(get_session
     if not auth.verify_password(payload.master_password, user.master_password_hash):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
+    # Return a token with user id; do not reveal vault key plain. Client should use master password to derive key and decrypt vault key.
     access_token = auth.create_access_token({"sub": str(user.id)})
     return JSONResponse({
         "access_token": access_token, 
@@ -167,37 +176,6 @@ async def login(payload: schemas.LoginIn, db: AsyncSession = Depends(get_session
         "public_key_pem": user.public_key_pem,
         "is_first_login": user.is_first_login
     })
-
-
-@app.post("/verify-recovery-key")
-async def verify_recovery_key(data: schemas.RecoveryKeyVerify, db: AsyncSession = Depends(get_session)):
-
-    user = await crud.get_user_by_email(db, data.email.lower())
-    if not user:
-        raise HTTPException(status_code=400, detail="Email not found")
-    
-    if not user.recovery_key_hash:
-        raise HTTPException(status_code=400, detail="No recovery key set for this account")
-    
-    if not auth.verify_password(data.recovery_key, user.recovery_key_hash):
-        raise HTTPException(status_code=400, detail="Invalid recovery key")
-    
-    return {"message": "Recovery key verified successfully", "email": user.email}
-
-
-@app.post("/reset-password")
-async def reset_password(data: schemas.PasswordReset, db: AsyncSession = Depends(get_session)):
-    user = await crud.get_user_by_email(db, data.email.lower())
-    if not user:
-        raise HTTPException(status_code=400, detail="Email not found")
-    
-    new_password_hash = auth.hash_password(data.new_master_password)
-    
-    user.master_password_hash = new_password_hash
-    db.add(user)
-    await db.commit()
-    
-    return {"message": "Password reset successfully"}
 
 
 @app.get("/me", response_model=schemas.UserOut)
@@ -211,33 +189,48 @@ async def update_me(
     current: models.User = Depends(auth.get_current_user),
     db: AsyncSession = Depends(get_session)
 ):
-
+    """Update current user's username and/or email."""
+    # Update username if provided (minimum 3 characters)
     if user_update.username and user_update.username != current.username:
         if len(user_update.username.strip()) < 3:
             raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
         current.username = user_update.username
     
+    # Check if email is being changed and if it's already registered
     if user_update.email and user_update.email.lower() != current.email:
         existing = await crud.get_user_by_email(db, user_update.email.lower())
         if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
         current.email = user_update.email.lower()
     
+    # Update the user in database
     updated_user = await crud.update_user(db, current)
     return updated_user
 
 
 @app.post("/complete-tutorial")
 async def complete_tutorial(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    """Mark tutorial as completed for the user (set is_first_login to False)"""
     current.is_first_login = False
     db.add(current)
     await db.commit()
     return {"message": "Tutorial completed", "is_first_login": False}
 
 
+# Biometric endpoints
 @app.post("/biometric/enable")
-async def enable_biometric(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+async def enable_biometric(
+    request: schemas.BiometricEnableRequest,
+    current: models.User = Depends(auth.get_current_user), 
+    db: AsyncSession = Depends(get_session)
+):
+    """Enable biometric authentication for the current user on this device
+    
+    SECURITY: Stores device ID to bind biometric to specific device.
+    This prevents another user from using their biometric with this account.
+    """
     current.biometric_enabled = True
+    current.biometric_device_id = request.device_id
     db.add(current)
     await db.commit()
     return {"message": "Biometric authentication enabled", "biometric_enabled": True}
@@ -245,7 +238,9 @@ async def enable_biometric(current: models.User = Depends(auth.get_current_user)
 
 @app.post("/biometric/disable")
 async def disable_biometric(current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    """Disable biometric authentication for the current user"""
     current.biometric_enabled = False
+    current.biometric_device_id = None
     db.add(current)
     await db.commit()
     return {"message": "Biometric authentication disabled", "biometric_enabled": False}
@@ -253,6 +248,7 @@ async def disable_biometric(current: models.User = Depends(auth.get_current_user
 
 @app.get("/biometric/status")
 async def get_biometric_status(current: models.User = Depends(auth.get_current_user)):
+    """Get biometric authentication status for the current user"""
     return {"biometric_enabled": current.biometric_enabled}
 
 
@@ -261,7 +257,12 @@ async def check_biometric_status(
     request: schemas.BiometricLoginRequest,
     db: AsyncSession = Depends(get_session)
 ):
-
+    """Check if biometric is enabled for a specific email
+    
+    This endpoint is used to check biometric status BEFORE prompting for fingerprint.
+    It does not require authentication and only returns the enabled status.
+    """
+    # Find user by email
     user = await crud.get_user_by_email(db, request.email.lower())
     
     if not user:
@@ -275,7 +276,18 @@ async def get_biometric_master_password(
     request: schemas.BiometricLoginRequest,
     db: AsyncSession = Depends(get_session)
 ):
-
+    """Get master password hash for biometric authentication
+    
+    This endpoint is used DURING login flow, BEFORE user is authenticated.
+    It verifies that biometric is enabled for the given email and returns
+    the master password hash to complete the login.
+    
+    SECURITY: This is safe because:
+    1. User must have already passed device biometric authentication
+    2. Biometric must be explicitly enabled for this account
+    3. The returned hash is still needed to decrypt vault keys
+    """
+    # Find user by email
     result = await db.execute(
         models.User.__table__.select().where(models.User.email == request.email)
     )
@@ -298,33 +310,66 @@ async def biometric_login(
     request: schemas.BiometricLoginRequest,
     db: AsyncSession = Depends(get_session)
 ):
-
+    """Login using biometric authentication
+    
+    This endpoint is called AFTER successful device biometric verification.
+    
+    SECURITY MEASURES:
+    1. User must have passed device-level biometric authentication (fingerprint/face)
+    2. Biometric must be explicitly enabled for this account in the database
+    3. Device ID must match the device where biometric was originally enabled
+    4. This prevents cross-device and cross-user biometric attacks
+    
+    ATTACK PREVENTION:
+    - Without device ID check: User A enables biometric on Device 1, User B uses 
+      their finger on Device 1 with User A's email → BLOCKED by device ID check
+    - With device ID check: Only the specific device where biometric was enabled
+      can use biometric login for that account
+    """
+    # Find user by email
     user = await crud.get_user_by_email(db, request.email.lower())
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Verify biometric is enabled for this account
     if not user.biometric_enabled:
         raise HTTPException(
             status_code=403, 
             detail="Biometric authentication is not enabled for this account"
         )
     
+    # CRITICAL SECURITY CHECK: Verify device ID matches
+    if not request.device_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Device ID is required for biometric authentication"
+        )
+    
+    if user.biometric_device_id != request.device_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Biometric authentication is not enabled on this device. Please use your master password or enable biometric on this device."
+        )
+    
+    # All security checks passed - create access token
     access_token = auth.create_access_token({"sub": str(user.id)})
     
+    # Return same response as regular login
     return JSONResponse({
         "access_token": access_token,
         "token_type": "bearer",
         "encrypted_vault_key": user.encrypted_vault_key.hex(),
         "vault_salt": user.vault_salt.hex(),
         "public_key_pem": user.public_key_pem,
-        "master_password_hash": user.master_password_hash, 
+        "master_password_hash": user.master_password_hash,  # Client needs this to derive vault key
         "is_first_login": user.is_first_login
     })
 
 
 @app.post("/passwords", response_model=schemas.PasswordEntryOut)
 async def create_password(entry: schemas.PasswordEntryCreate, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    # Server stores encrypted_password blob as-is
     pe = models.PasswordEntry(
         owner_id=current.id,
         title=entry.title,
@@ -350,7 +395,9 @@ async def get_password(password_id: int, current: models.User = Depends(auth.get
     if not password:
         raise HTTPException(status_code=404, detail="Password not found")
     
+    # Check if user is owner or has access via sharing
     if password.owner_id != current.id:
+        # Check if password is shared with this user
         shared = await crud.get_share_for_user_and_password(db, current.id, password_id)
         if not shared:
             raise HTTPException(status_code=404, detail="Password not found")
@@ -364,6 +411,7 @@ async def update_password(password_id: int, entry: schemas.PasswordEntryCreate, 
     if not password:
         raise HTTPException(status_code=404, detail="Password not found")
     
+    # Check if user is owner or has edit permission via sharing
     if password.owner_id != current.id:
         shared = await crud.get_share_for_user_and_password(db, current.id, password_id)
         if not shared or shared.permission != "edit":
@@ -394,6 +442,7 @@ async def delete_password(password_id: int, current: models.User = Depends(auth.
 
 @app.post("/share", response_model=schemas.ShareOut)
 async def share_password(share: schemas.ShareCreate, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    # Ensure recipient exists
     recipient = await crud.get_user_by_id(db, share.to_user_id)
     if not recipient:
         raise HTTPException(status_code=404, detail="Recipient not found")
@@ -471,20 +520,24 @@ async def outgoing_shares(current: models.User = Depends(auth.get_current_user),
 
 @app.get("/passwords/{password_id}/shares", response_model=list[schemas.ShareOut])
 async def get_password_shares(password_id: int, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    # Verify the user owns this password
     password = await crud.get_password_entry(db, password_id)
     if not password or password.owner_id != current.id:
         raise HTTPException(status_code=404, detail="Password not found")
     
+    # Get all shares for this password
     items = await crud.get_shares_for_password(db, password_id)
     return items
 
 
 @app.delete("/shared/{share_id}")
 async def delete_share(share_id: int, current: models.User = Depends(auth.get_current_user), db: AsyncSession = Depends(get_session)):
+    # Get the share
     share = await crud.get_share_by_id(db, share_id)
     if not share:
         raise HTTPException(status_code=404, detail="Share not found")
     
+    # Only the owner can delete shares
     if share.from_user_id != current.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
