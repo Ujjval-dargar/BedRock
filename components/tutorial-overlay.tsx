@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -114,8 +114,11 @@ export function TutorialOverlay({
   const isLast = currentStep === tutorialSteps.length;
 
   const getBoxPosition = () => {
-    // Only add safe area padding if device has bottom insets (home indicator)
-    const navBarTotalHeight = 60 + (insets.bottom > 0 ? insets.bottom : 0) + 20; // nav height + safe area + margin
+    // The nav bar height including its bottom padding
+    // The container is positioned at bottom: 0, and React Native handles system bars automatically
+    const navBarHeight = 60;
+    const navBarPaddingBottom = 8;
+    const navBarTotalHeight = navBarHeight + navBarPaddingBottom + insets.bottom + 20; // nav height + padding + safe area + margin
     
     switch (step.position) {
       case 'center':
@@ -160,12 +163,15 @@ export function TutorialOverlay({
     const circleSize = 90;
     
     // Calculate vertical position consistently from bottom
-    // Nav items have paddingTop: 12, icon height ~26, marginTop on label: 4, label height ~18
-    // Visual center of nav items (icon + label) is approximately at: paddingTop + iconSize/2 = 12 + 13 = 25 from top of nav bar
-    // From bottom: safeArea + navBarPaddingBottom(8) + (navBarHeight - paddingBottom - visualCenter)
+    // iOS: nav bar extends into safe area, insets.bottom is significant (e.g., 34px)
+    // Android: insets.bottom is 0, nav bar is positioned above system buttons by React Native
+    // The key: only use insets.bottom if it's actually present (iOS devices with home indicator)
     const navBarPaddingBottom = 8;
     const iconAndLabelCenter = 25; // Visual center from top of nav bar
-    const itemCenterFromBottom = insets.bottom + navBarPaddingBottom + (navBarHeight - navBarPaddingBottom - iconAndLabelCenter);
+    
+    // Use insets.bottom only when it exists (iOS with home indicator), otherwise 0 (Android/older iOS)
+    const actualSafeArea = Platform.OS === 'ios' ? insets.bottom : 0;
+    const itemCenterFromBottom = actualSafeArea + navBarPaddingBottom + (navBarHeight - navBarPaddingBottom - iconAndLabelCenter);
 
     // Navigation bar now uses space-evenly for equal spacing
     // Left section: justifyContent: 'space-evenly', paddingRight: fabSize/2 (28)
@@ -205,12 +211,11 @@ export function TutorialOverlay({
         // FAB is absolutely positioned at center, raised above nav bar
         // FAB positioning: top: -fabSize/2 + 8 = -28 + 8 = -20 from top of nav bar
         // This means FAB center is at: navBarHeight - 20 - fabSize/2 = 60 - 20 - 28 = 12 from top of nav bar
-        // From bottom: safeArea + navBarPaddingBottom + (navBarHeight - paddingBottom - 12)
         const fabVisualCenter = 12; // From top of nav bar
-        const fabCenterFromBottom = insets.bottom + navBarPaddingBottom + (navBarHeight - navBarPaddingBottom - fabVisualCenter);
+        const fabCenterFromBottom = actualSafeArea + navBarPaddingBottom + (navBarHeight - navBarPaddingBottom - fabVisualCenter);
         highlightStyle = {
-          bottom: fabCenterFromBottom - (circleSize / 2)+10,
-          left: fabCenter - (circleSize / 2)-6,
+          bottom: fabCenterFromBottom - (circleSize / 2),
+          left: fabCenter - (circleSize / 2),
           width: circleSize,
           height: circleSize,
         };
