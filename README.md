@@ -1,50 +1,80 @@
-# Welcome to your Expo app 👋
+# BedRock – Password Manager (Android)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**BedRock** is a secure and user-friendly **Android password manager** built using **Expo (React Native)**.
+It helps users safely store, generate, analyze, and share passwords while maintaining a strong focus on **security, usability, and modern app design**.
 
-## Get started
+---
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+### Secure Vault
 
-2. Start the app
+* Store all your credentials in an encrypted digital vault
+* Organize passwords using categories (Social, Work, Email, Card, etc.)
+* Search and filter passwords easily
 
-   ```bash
-   npx expo start
-   ```
+### Password Health & Risks
 
-In the output, you'll find options to open the app in a
+* Overall **Password Health Score (0–100)**
+* Categorizes passwords into:
+  * Strong
+  * Weak
+  * Duplicate
+  * Leaked (checked against public breach databases)
+* Helps users identify and fix vulnerable passwords
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Password Generator
+* Industry-standard strong password generation
+* Customizable filters:
+  * Length
+  * Uppercase / lowercase
+  * Numbers
+  * Special characters
+* One-click copy or directly use while adding a password
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Secure Password Sharing
+* Share passwords **securely between BedRock users**
+* Encrypted sharing with optional notes
+* Manage shared access (add/remove recipients, revoke sharing)
 
-## Get a fresh project
+### Authentication & Security
+* Email-based registration with **OTP verification**
+* Master Password for vault access
+* Optional **biometric authentication** (fingerprint)
+* Secure login and logout flows
 
-When you're ready, run:
+### Clean & Intuitive UI
+* Guided in-app tutorial on first launch
+* Quick actions for common tasks
+* Well-structured navigation for smooth user experience
+
+---
+## Tech Stack
+
+* **Frontend:** Expo, React Native
+* **Language:** JavaScript / TypeScript
+* **Platform:** Android
+* **Authentication:** Email + OTP, Biometric Login
+* **Security:** Encrypted storage & secure sharing logic
+
+---
+
+## ⚙️ Installation & Setup
 
 ```bash
-npm run reset-project
+# Clone the repository
+git clone https://github.com/your-username/bedrock-password-manager.git
+
+# Navigate to project directory
+cd bedrock-password-manager
+
+# Install dependencies
+npm install
+
+# Start the Expo development server
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+> 📌 Make sure you have **Node.js**, **npm**, and **Expo CLI** installed.
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
