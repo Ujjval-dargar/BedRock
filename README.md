@@ -59,6 +59,14 @@ It helps users safely store, generate, analyze, and share passwords while mainta
 
 ---
 
+## User Guide
+
+For a complete step-by-step guide on how to use BedRock Password Manager, please refer to our detailed documentation:
+
+**[BedRock User Guide](https://docs.google.com/document/d/154Fkf5U77hcLqPKA_41rIHYcXxw5NyKB-Yt0ggxA0Es/edit?usp=sharing)**
+
+---
+
 ## ⚙️ Installation & Setup
 
 ```bash
